@@ -38,11 +38,6 @@ pub fn request_graceful_stop(pid: u32) -> io::Result<()> {
         .map_err(|errno| io::Error::from_raw_os_error(errno as i32))
 }
 
-#[cfg(unix)]
-pub fn windows_creation_flags() -> u32 {
-    0
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
