@@ -4,10 +4,14 @@ A Rust port of [scaccogatto/nastro](https://github.com/scaccogatto/nastro) - a
 terminal-native call recorder (system audio + mic, local files, on-device
 transcription) - retargeted from **macOS-only** to **Windows + Linux**.
 
-> **Status: early scaffold.** Config loading and the recordings browser
-> (`nastro records`) are fully functional. Audio capture, transcription, and the TUI
-> are not yet implemented - see [`CHANGELOG.md`](CHANGELOG.md) for exact scope and
-> [`docs/`](docs/) for the phased build plan.
+> **Status: early scaffold.** Config loading, the recordings browser
+> (`nastro records`), and recording *session orchestration* (`nastro record`:
+> locking, disk-space checks, anti-sleep, spawning/supervising the capture helper,
+> graceful stop) are fully functional. Actual audio capture, transcription, and the
+> TUI are not yet implemented - `nastro-tap` is currently a stub, so `nastro record`
+> runs the whole pipeline correctly but can't record audio yet. See
+> [`CHANGELOG.md`](CHANGELOG.md) for exact scope and [`docs/`](docs/) for the phased
+> build plan.
 
 ## Why a port, and why these platform/format choices
 
@@ -37,7 +41,7 @@ See `NOTICE.md` for attribution to the original project.
 crates/
   nastro-config/   TOML config load/defaults (done)
   nastro-records/  filesystem-as-database scan/formatting (done)
-  nastro-record/   recording session orchestration (scaffold)
+  nastro-record/   recording session orchestration (done)
   nastro-audio/    capture/mixer core + platform backends (scaffold)
   nastro-tui/      ratatui screens (scaffold)
 bin/
@@ -60,6 +64,7 @@ cargo fmt --all -- --check
 ```powershell
 cargo run --bin nastro -- records --plain
 cargo run --bin nastro -- records
+cargo run --bin nastro -- record --name "Weekly Sync"   # orchestration works; nastro-tap is still a capture stub
 ```
 
 Config is read from `%APPDATA%\nastro\config.toml` (Windows) /

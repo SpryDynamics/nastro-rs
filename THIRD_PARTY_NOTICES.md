@@ -80,7 +80,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## MIT License
 
-Used by: `cfg-if 1.0.5`
+Used by: `cfg-if 1.0.5`, `js-sys 0.3.106`, `wasm-bindgen-macro-support 0.2.129`, `wasm-bindgen-macro 0.2.129`, `wasm-bindgen-shared 0.2.129`, `wasm-bindgen 0.2.129`
 
 <details>
 <summary>License text</summary>
@@ -118,7 +118,45 @@ DEALINGS IN THE SOFTWARE.
 
 ## MIT License
 
-Used by: `bitflags 2.13.2`
+Used by: `errno 0.3.14`
+
+<details>
+<summary>License text</summary>
+
+```
+Copyright (c) 2014 Chris Wong
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+```
+
+</details>
+
+## MIT License
+
+Used by: `bitflags 2.13.2`, `log 0.4.34`, `num-traits 0.2.19`
 
 <details>
 <summary>License text</summary>
@@ -194,7 +232,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## MIT License
 
-Used by: `heck 0.5.0`
+Used by: `fs4 1.1.0`, `heck 0.5.0`
 
 <details>
 <summary>License text</summary>
@@ -257,6 +295,45 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+```
+
+</details>
+
+## MIT License
+
+Used by: `futures-core 0.3.34`, `futures-task 0.3.34`, `futures-util 0.3.34`
+
+<details>
+<summary>License text</summary>
+
+```
+Copyright (c) 2016 Alex Crichton
+Copyright (c) 2017 The Tokio Authors
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 ```
 
@@ -519,6 +596,120 @@ DEALINGS IN THE SOFTWARE.
 
 ## MIT License
 
+Used by: `slab 0.4.12`
+
+<details>
+<summary>License text</summary>
+
+```
+Copyright (c) 2019 Carl Lerche
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+```
+
+</details>
+
+## MIT License
+
+Used by: `bumpalo 3.20.3`
+
+<details>
+<summary>License text</summary>
+
+```
+Copyright (c) 2019 Nick Fitzgerald
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+```
+
+</details>
+
+## MIT License
+
+Used by: `iana-time-zone-haiku 0.1.2`, `iana-time-zone 0.1.65`
+
+<details>
+<summary>License text</summary>
+
+```
+Copyright (c) 2020 Andrew D. Straw
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+```
+
+</details>
+
+## MIT License
+
 Used by: `anstream 1.0.0`, `anstyle-parse 1.0.0`, `anstyle-query 1.1.5`, `anstyle-wincon 3.0.11`, `anstyle 1.0.14`, `clap 4.6.7`, `clap_builder 4.6.7`, `clap_derive 4.6.7`, `clap_lex 1.1.1`, `colorchoice 1.0.5`, `is_terminal_polyfill 1.70.2`, `once_cell_polyfill 1.70.2`, `serde_spanned 0.6.9`, `toml 0.8.23`, `toml_datetime 0.6.11`, `toml_edit 0.22.27`, `toml_write 0.1.2`
 
 <details>
@@ -623,7 +814,7 @@ SOFTWARE.
 
 ## MIT License
 
-Used by: `nastro 0.1.0`, `nastro-tap 0.1.0`, `nastro-audio 0.1.0`, `nastro-config 0.1.0`, `nastro-record 0.1.0`, `nastro-records 0.1.0`, `nastro-tui 0.1.0`, `winapi-i686-pc-windows-gnu 0.4.0`, `winapi-x86_64-pc-windows-gnu 0.4.0`, `windows-core 0.57.0`, `windows-implement 0.57.0`, `windows-interface 0.57.0`, `windows-link 0.2.1`, `windows-result 0.1.2`, `windows-sys 0.48.0`, `windows-sys 0.61.2`, `windows-targets 0.48.5`, `windows-targets 0.52.6`, `windows 0.57.0`, `windows_aarch64_gnullvm 0.48.5`, `windows_aarch64_gnullvm 0.52.6`, `windows_aarch64_msvc 0.48.5`, `windows_aarch64_msvc 0.52.6`, `windows_i686_gnu 0.48.5`, `windows_i686_gnu 0.52.6`, `windows_i686_gnullvm 0.52.6`, `windows_i686_msvc 0.48.5`, `windows_i686_msvc 0.52.6`, `windows_x86_64_gnu 0.48.5`, `windows_x86_64_gnu 0.52.6`, `windows_x86_64_gnullvm 0.48.5`, `windows_x86_64_gnullvm 0.52.6`, `windows_x86_64_msvc 0.48.5`, `windows_x86_64_msvc 0.52.6`
+Used by: `nastro 0.1.0`, `nastro-tap 0.1.0`, `nastro-audio 0.1.0`, `nastro-config 0.1.0`, `nastro-record 0.1.0`, `nastro-records 0.1.0`, `nastro-tui 0.1.0`, `block2 0.6.2`, `chrono 0.4.45`, `dispatch2 0.3.1`, `objc2-encode 4.1.0`, `objc2 0.6.5`, `winapi-i686-pc-windows-gnu 0.4.0`, `winapi-x86_64-pc-windows-gnu 0.4.0`, `windows-core 0.57.0`, `windows-implement 0.57.0`, `windows-interface 0.57.0`, `windows-link 0.2.1`, `windows-result 0.1.2`, `windows-sys 0.48.0`, `windows-sys 0.61.2`, `windows-targets 0.48.5`, `windows-targets 0.52.6`, `windows 0.57.0`, `windows_aarch64_gnullvm 0.48.5`, `windows_aarch64_gnullvm 0.52.6`, `windows_aarch64_msvc 0.48.5`, `windows_aarch64_msvc 0.52.6`, `windows_i686_gnu 0.48.5`, `windows_i686_gnu 0.52.6`, `windows_i686_gnullvm 0.52.6`, `windows_i686_msvc 0.48.5`, `windows_i686_msvc 0.52.6`, `windows_x86_64_gnu 0.48.5`, `windows_x86_64_gnu 0.52.6`, `windows_x86_64_gnullvm 0.48.5`, `windows_x86_64_gnullvm 0.52.6`, `windows_x86_64_msvc 0.48.5`, `windows_x86_64_msvc 0.52.6`
 
 <details>
 <summary>License text</summary>
@@ -654,7 +845,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## MIT License
 
-Used by: `anyhow 1.0.104`, `itoa 1.0.18`, `proc-macro2 1.0.107`, `quote 1.0.47`, `serde 1.0.229`, `serde_core 1.0.229`, `serde_derive 1.0.229`, `serde_json 1.0.154`, `syn 2.0.119`, `syn 3.0.9`, `thiserror-impl 1.0.69`, `thiserror 1.0.69`, `unicode-ident 1.0.27`, `wasi 0.11.1+wasi-snapshot-preview1`, `zmij 1.0.23`
+Used by: `anyhow 1.0.104`, `ctrlc 3.5.2`, `itoa 1.0.18`, `linux-raw-sys 0.12.1`, `once_cell 1.21.4`, `pin-project-lite 0.2.17`, `proc-macro2 1.0.107`, `quote 1.0.47`, `rustix 1.1.5`, `serde 1.0.229`, `serde_core 1.0.229`, `serde_derive 1.0.229`, `serde_json 1.0.154`, `syn 2.0.119`, `syn 3.0.9`, `thiserror-impl 1.0.69`, `thiserror 1.0.69`, `unicode-ident 1.0.27`, `wasi 0.11.1+wasi-snapshot-preview1`, `zmij 1.0.23`
 
 <details>
 <summary>License text</summary>
@@ -751,6 +942,39 @@ SOFTWARE.
 
 ## MIT License
 
+Used by: `android_system_properties 0.1.6`
+
+<details>
+<summary>License text</summary>
+
+```
+The MIT License (MIT)
+
+Copyright (c) 2013 Nicolas Silva
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+```
+
+</details>
+
+## MIT License
+
 Used by: `memchr 2.8.3`
 
 <details>
@@ -785,7 +1009,7 @@ THE SOFTWARE.
 
 ## MIT License
 
-Used by: `nix 0.29.0`
+Used by: `nix 0.29.0`, `nix 0.31.3`
 
 <details>
 <summary>License text</summary>

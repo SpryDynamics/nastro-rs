@@ -8,7 +8,7 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - Workspace scaffold, CI (build/test/clippy/fmt matrix on Windows+Linux),
   license-compliance gate (`cargo-deny`), generated `THIRD_PARTY_NOTICES.md`.
 
-## Phase 2 - Record session orchestration (`nastro-record`)
+## Phase 2 - Record session orchestration (`nastro-record`) (done)
 - Lockfile lifecycle (atomic create, stale-PID detection via `sysinfo`).
 - Disk-space check (`fs4`/platform APIs).
 - Anti-sleep: `SetThreadExecutionState` (Windows) / best-effort `systemd-inhibit`
@@ -17,6 +17,10 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
   (0 = clean stop, 2 = permission denied, 1 = other failure).
 - Graceful stop: Windows console control events (`CTRL_BREAK_EVENT` +
   `CREATE_NEW_PROCESS_GROUP`) vs. Unix `SIGINT`/`SIGKILL`.
+- `nastro record` CLI wired end-to-end against the stub `nastro-tap` (disk check,
+  lock, dir creation, spawn, Ctrl+C → graceful stop → force-kill, exit code).
+- Not yet exercised against *real* capture, since `nastro-audio`/`nastro-tap`
+  (Phase 3) don't actually capture audio yet.
 
 ## Phase 3 - Audio capture (`nastro-audio` + `nastro-tap`)
 - Platform-agnostic ring buffer / wall-clock-driven mixer / rate-drift watcher
