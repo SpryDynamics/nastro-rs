@@ -14,7 +14,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-authors = ["Tab Fitts"]
+authors = ["Spry Dynamics, LLC", "Tab Fitts"]
 repository = "https://dev.azure.com/sprydynamics/oss-tools/_git/nastro-rs"
 rust-version = "1.82"
 
