@@ -1,0 +1,12 @@
+[package]
+name = "nastro-audio"
+description = "Platform-agnostic audio mixer/ring-buffer core plus capture backends (WASAPI on Windows, PulseAudio monitor-source on Linux) for nastro (Rust port)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror.workspace = true

@@ -1,0 +1,15 @@
+{{#each licenses}}
+## {{this.name}}
+
+Used by: {{#each this.used_by}}`{{this.crate.name}} {{this.crate.version}}`{{#unless @last}}, {{/unless}}{{/each}}
+
+<details>
+<summary>License text</summary>
+
+```
+{{{this.text}}}
+```
+
+</details>
+
+{{/each}}

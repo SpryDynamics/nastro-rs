@@ -1,0 +1,16 @@
+[package]
+name = "nastro-tap"
+description = "Audio capture helper for nastro: system audio + mic, spawned by nastro and communicating over stdio (level lines + exit codes)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "nastro-tap"
+path = "src/main.rs"
+
+[dependencies]
+nastro-audio.workspace = true

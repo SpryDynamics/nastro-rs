@@ -1,0 +1,21 @@
+[package]
+name = "nastro-record"
+description = "Recording session orchestration for nastro (Rust port): lockfile, spawn/stdio protocol with nastro-tap, disk-space checks."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+sysinfo.workspace = true
+nastro-config.workspace = true
+nastro-records.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.57", features = ["Win32_System_Power", "Win32_System_Console", "Win32_Foundation"] }
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["signal", "process"] }

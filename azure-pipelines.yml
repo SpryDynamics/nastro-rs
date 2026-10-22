@@ -1,0 +1,54 @@
+trigger:
+  branches:
+    include:
+      - main
+  tags:
+    include:
+      - v*
+
+pr:
+  branches:
+    include:
+      - main
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildTestLint
+        strategy:
+          matrix:
+            Windows:
+              imageName: windows-latest
+            Linux:
+              imageName: ubuntu-latest
+        pool:
+          vmImage: $(imageName)
+        steps:
+          - script: |
+              rustup component add clippy rustfmt
+            displayName: Install clippy/rustfmt components
+
+          - script: cargo build --workspace --all-targets
+            displayName: Build
+
+          - script: cargo test --workspace
+            displayName: Test
+
+          - script: cargo clippy --workspace --all-targets -- -D warnings
+            displayName: Clippy
+
+          - script: cargo fmt --all -- --check
+            displayName: Fmt check
+
+  - stage: LicenseCompliance
+    dependsOn: Build
+    jobs:
+      - job: CheckLicenses
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: cargo install cargo-deny --locked
+            displayName: Install cargo-deny
+
+          - pwsh: ./eng/check-licenses.ps1
+            displayName: Dependency license/advisory allow-list check

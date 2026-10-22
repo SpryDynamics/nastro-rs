@@ -1,0 +1,13 @@
+[package]
+name = "nastro-tui"
+description = "ratatui-based TUI screens for nastro (Rust port)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+nastro-config.workspace = true
+nastro-records.workspace = true
