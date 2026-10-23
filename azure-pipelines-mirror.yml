@@ -1,0 +1,72 @@
+# One-way, read-only mirror of this repository to GitHub (SpryDynamics/nastro-rs).
+# Azure DevOps stays the source of truth: nothing is ever pulled back from GitHub,
+# only `main` and `v*` tags are published (never other branches), and a push that
+# is not a fast-forward is refused rather than forced.
+#
+# Credential: a GitHub *deploy key* scoped to that single repository, stored as the
+# secret pipeline variable MIRROR_DEPLOY_KEY_B64 (base64 of the private key). It cannot
+# reach any other repository or organization resource.
+
+trigger:
+  branches:
+    include:
+      - main
+  tags:
+    include:
+      - v*
+
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  githubRepo: git@github.com:SpryDynamics/nastro-rs.git
+  # GitHub's published ed25519 host key (https://api.github.com/meta -> ssh_keys).
+  # Pinned so the mirror never trusts a first-seen key.
+  githubHostKey: "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl"
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+    persistCredentials: false
+    displayName: Checkout full history
+
+  - bash: |
+      set -euo pipefail
+      mkdir -p ~/.ssh && chmod 700 ~/.ssh
+      printf '%s\n' "$GITHUB_HOST_KEY" > ~/.ssh/known_hosts
+      # base64 -d; the variable is a masked secret, so it never appears in logs.
+      printf '%s' "$MIRROR_KEY_B64" | base64 -d > ~/.ssh/mirror_key
+      chmod 600 ~/.ssh/mirror_key
+      ssh-keygen -y -f ~/.ssh/mirror_key > /dev/null   # fails here if the key is unusable
+    displayName: Install deploy key
+    env:
+      MIRROR_KEY_B64: $(MIRROR_DEPLOY_KEY_B64)
+      GITHUB_HOST_KEY: $(githubHostKey)
+
+  - bash: |
+      set -euo pipefail
+      export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/mirror_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+      git remote remove github 2>/dev/null || true
+      git remote add github "$(githubRepo)"
+
+      ref="$(Build.SourceBranch)"
+      case "$ref" in
+        refs/heads/main)
+          echo "Mirroring main ($(Build.SourceVersion))"
+          # Not forced: if GitHub somehow has commits ADO doesn't, fail loudly.
+          git push github "$(Build.SourceVersion):refs/heads/main"
+          ;;
+        refs/tags/v*)
+          tag="${ref#refs/tags/}"
+          echo "Mirroring tag $tag"
+          git push github "refs/tags/$tag:refs/tags/$tag"
+          # Tags are only useful with the commit they point at.
+          git push github "$(Build.SourceVersion):refs/heads/main" || \
+            echo "main already up to date or ahead; tag pushed regardless"
+          ;;
+        *)
+          echo "Refusing to mirror $ref"; exit 1 ;;
+      esac
+    displayName: Push to GitHub
