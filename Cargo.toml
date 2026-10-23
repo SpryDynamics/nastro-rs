@@ -43,3 +43,4 @@ trash = "5"
 opt-level = 3
 lto = true
 codegen-units = 1
+strip = true

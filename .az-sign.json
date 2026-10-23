@@ -1,0 +1,5 @@
+{
+  "endpoint": "https://wus2.codesigning.azure.net",
+  "account": "sd-artifact-signing",
+  "certificateProfile": "SpryDynamicsAppSignPublic"
+}

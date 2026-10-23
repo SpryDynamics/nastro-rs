@@ -1,0 +1,172 @@
+# Release pipeline: builds, signs (Windows) and packages nastro.
+#
+# Runs on version tags (v*), and can be run by hand to produce signed, packaged
+# artifacts without cutting a release. CI (azure-pipelines.yml) is separate and
+# never signs anything.
+
+trigger:
+  branches:
+    exclude:
+      - "*"
+  tags:
+    include:
+      - v*
+
+pr: none
+
+parameters:
+  # Turn off to produce unsigned Windows binaries (e.g. while debugging packaging).
+  - name: signWindows
+    displayName: Sign the Windows binaries
+    type: boolean
+    default: true
+
+variables:
+  # Service connection (workload identity federation, no secret). Its only Azure
+  # permission is "Artifact Signing Certificate Profile Signer" on the
+  # SpryDynamicsAppSignPublic certificate profile.
+  signingServiceConnection: nastro-artifact-signing
+  # Pinned so a release can never pick up a newer, unreviewed signing toolchain.
+  azArtifactSignVersion: 0.1.0
+  signCliVersion: 0.9.1-beta.26475.3
+  feedUrl: https://pkgs.dev.azure.com/sprydynamics/oss-tools/_packaging/oss-tools-feed/nuget/v3/index.json
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Windows
+        pool:
+          vmImage: windows-latest
+        steps:
+          - pwsh: |
+              $v = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+              Write-Host "Cargo version: $v"
+              if ('$(Build.SourceBranch)' -like 'refs/tags/v*') {
+                $tag = '$(Build.SourceBranch)'.Substring('refs/tags/v'.Length)
+                if ($tag -ne $v) { throw "Tag v$tag does not match Cargo.toml version $v" }
+                Write-Host "Tag matches version."
+              }
+              Write-Host "##vso[task.setvariable variable=nastroVersion;isOutput=true]$v"
+            name: version
+            displayName: Check tag matches Cargo.toml version
+
+          - script: cargo build --release --locked -p nastro -p nastro-tap
+            displayName: Build release binaries
+
+          - ${{ if eq(parameters.signWindows, true) }}:
+              - task: UseDotNet@2
+                displayName: Use .NET 8 + 9 (sign needs 8, az-artifact-sign needs 9)
+                inputs:
+                  packageType: sdk
+                  version: 8.0.x
+              - task: UseDotNet@2
+                inputs:
+                  packageType: sdk
+                  version: 9.0.x
+
+              - task: NuGetAuthenticate@1
+                displayName: Authenticate to Azure Artifacts
+
+              - pwsh: |
+                  $ErrorActionPreference = 'Stop'
+                  dotnet tool install --global sign --version $(signCliVersion)
+                  dotnet tool install --global AzArtifactSign --version $(azArtifactSignVersion) --add-source $(feedUrl)
+                displayName: Install signing tools (pinned versions)
+
+              - task: AzureCLI@2
+                displayName: Sign binaries (Azure Artifact Signing, RFC 3161 timestamped)
+                inputs:
+                  azureSubscription: $(signingServiceConnection)
+                  scriptType: pscore
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    $ErrorActionPreference = 'Stop'
+                    $tool = Join-Path $env:USERPROFILE '.dotnet\tools\az-artifact-sign.exe'
+                    & $tool sign target\release\nastro.exe target\release\nastro-tap.exe `
+                      --description nastro `
+                      --description-url https://dev.azure.com/sprydynamics/oss-tools/_git/nastro-rs `
+                      --credential-type azure-cli --verify
+                    if ($LASTEXITCODE -ne 0) { throw "signing failed with exit code $LASTEXITCODE" }
+
+          - pwsh: ./eng/package.ps1
+            displayName: Package
+
+          # Verify what actually ships, not the intermediate files: unpack the archive
+          # and check the signature on the extracted binaries.
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              $zip = Get-ChildItem dist\*.zip | Select-Object -First 1
+              Expand-Archive $zip.FullName "$(Agent.TempDirectory)\verify"
+              $dir = Get-ChildItem "$(Agent.TempDirectory)\verify" | Select-Object -First 1
+              & "$($dir.FullName)\nastro.exe" --version
+              $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+              foreach ($f in 'nastro.exe','nastro-tap.exe') {
+                $out = & $signtool.FullName verify /pa /v "$($dir.FullName)\$f" 2>&1
+                $out | Select-String 'Issued to: Spry|timestamped|Successfully verified|Number of errors'
+                if ($LASTEXITCODE -ne 0) { throw "$f failed signature verification" }
+              }
+            displayName: Verify the packaged binaries are signed
+            condition: and(succeeded(), eq('${{ parameters.signWindows }}', 'true'))
+
+          - publish: dist
+            artifact: windows
+            displayName: Publish artifact (windows)
+
+      - job: Linux
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y libpulse-dev
+            displayName: Install libpulse-dev (link-time dependency)
+
+          - script: cargo build --release --locked -p nastro -p nastro-tap
+            displayName: Build release binaries
+
+          - pwsh: ./eng/package.ps1
+            displayName: Package
+
+          - script: |
+              set -euo pipefail
+              mkdir -p "$(Agent.TempDirectory)/verify"
+              tar -xzf dist/*.tar.gz -C "$(Agent.TempDirectory)/verify"
+              d=$(ls -d "$(Agent.TempDirectory)/verify"/*/)
+              "$d/nastro" --version
+              echo "--- dynamic dependencies ---"
+              ldd "$d/nastro" "$d/nastro-tap" | tee "$(Agent.TempDirectory)/ldd.txt"
+              if grep -q "not found" "$(Agent.TempDirectory)/ldd.txt"; then echo "unresolved shared library"; exit 1; fi
+              echo "--- checksum ---"
+              (cd dist && sha256sum -c *.sha256)
+            displayName: Smoke-test the packaged tarball
+
+          - publish: dist
+            artifact: linux
+            displayName: Publish artifact (linux)
+
+  - stage: Release
+    displayName: Collect release assets
+    dependsOn: Build
+    jobs:
+      - job: Collect
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - download: current
+            artifact: windows
+          - download: current
+            artifact: linux
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              New-Item -ItemType Directory release | Out-Null
+              Copy-Item "$(Pipeline.Workspace)/windows/*", "$(Pipeline.Workspace)/linux/*" release -Include *.zip, *.tar.gz
+              Push-Location release
+              Get-ChildItem -File | Where-Object { $_.Name -notlike '*.sha256' } | Sort-Object Name | ForEach-Object {
+                "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
+              } | Set-Content SHA256SUMS
+              Get-Content SHA256SUMS
+              Pop-Location
+            displayName: Gather archives and write SHA256SUMS
+          - publish: release
+            artifact: release
+            displayName: Publish artifact (release)

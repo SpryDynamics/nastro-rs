@@ -9,3 +9,6 @@
 # OS cruft
 Thumbs.db
 .DS_Store
+
+# Release packaging output
+/dist/
