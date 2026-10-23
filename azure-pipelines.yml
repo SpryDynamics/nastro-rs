@@ -51,6 +51,10 @@ stages:
 
           - script: cargo test --workspace
             displayName: Test
+            env:
+              # Fail (don't silently skip) if ffmpeg is missing, so the real-encoder
+              # round trip is guaranteed to have run.
+              NASTRO_REQUIRE_FFMPEG: "1"
 
           - script: cargo clippy --workspace --all-targets -- -D warnings
             displayName: Clippy

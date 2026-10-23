@@ -266,10 +266,16 @@ mod tests {
     }
 
     /// End-to-end against a real ffmpeg. Skipped (with a note) where ffmpeg isn't
-    /// installed, so the suite still passes on machines without it.
+    /// installed, so the suite still passes on machines without it - unless
+    /// `NASTRO_REQUIRE_FFMPEG` is set (CI does), in which case a missing ffmpeg is a
+    /// failure, so the test can never silently skip where it is meant to run.
     #[test]
     fn encodes_a_real_playable_m4a_when_ffmpeg_is_available() {
         if !ffmpeg_available() {
+            assert!(
+                std::env::var_os("NASTRO_REQUIRE_FFMPEG").is_none(),
+                "NASTRO_REQUIRE_FFMPEG is set but ffmpeg is not available"
+            );
             eprintln!("skipping: ffmpeg not available on this machine");
             return;
         }
