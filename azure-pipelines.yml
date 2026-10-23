@@ -55,7 +55,8 @@ stages:
           - task: Cache@2
             displayName: Cache the test speech model
             inputs:
-              key: 'whisper-models | "$(Agent.OS)" | tiny.en | v1'
+              # (A key segment containing a dot is treated by Cache@2 as a file path, hence "tiny-en".)
+              key: 'whisper-models | "$(Agent.OS)" | tiny-en | v1'
               path: $(Pipeline.Workspace)/whisper-models
 
           - script: cargo build --workspace --all-targets
