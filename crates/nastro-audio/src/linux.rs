@@ -118,9 +118,13 @@ fn run_pulse_capture_thread(
     ) {
         Ok(s) => s,
         Err(e) => {
+            // `PAErr` has an inherent `to_string(&self) -> Option<String>` (wrapping
+            // `pa_strerror`, which can return NULL for an unrecognized code) that
+            // shadows the blanket `Display`/`ToString` impl - use `{:?}` to sidestep
+            // it rather than unwrap an `Option` that's allowed to be `None`.
             let _ = ready_tx.send(Err(CaptureError::Init {
                 component: label,
-                message: e.to_string(),
+                message: format!("{e:?}"),
             }));
             return;
         }
