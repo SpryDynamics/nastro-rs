@@ -136,10 +136,9 @@ fn run_pulse_capture_thread(
     while !stop_flag.load(Ordering::SeqCst) {
         match simple.read(&mut buf) {
             Ok(()) => {
-                let mut samples = Vec::with_capacity(buf.len() / 4);
-                for chunk in buf.chunks_exact(4) {
-                    samples.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-                }
+                // `READ_CHUNK_BYTES` is a multiple of 4, so there is no remainder.
+                let (words, _) = buf.as_chunks::<4>();
+                let samples: Vec<f32> = words.iter().map(|w| f32::from_le_bytes(*w)).collect();
                 sink.push(&samples);
             }
             Err(e) => {
