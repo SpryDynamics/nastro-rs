@@ -52,10 +52,17 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - Not yet done: `nastro transcribe`'s 16 kHz resample step (Phase 7) will reuse this
   same ffmpeg dependency.
 
-## Phase 5 - TUI/CLI (`nastro-tui`, `bin/nastro`)
-- `ratatui` + `crossterm` port of list/name-form/recording/detail/help screens.
-- Reveal-in-folder (`explorer /select,`/`xdg-open`), delete→Trash (`trash` crate),
-  OSC-8 hyperlinks (unchanged, terminal-level feature).
+## Phase 5 - TUI/CLI (`nastro-tui`, `bin/nastro`) (done, Windows-verified)
+- `ratatui` port of the list / name-form / recording / detail / help screens, with
+  filter, confirm modals, and live timer + dB level meters.
+- Delete → Recycle Bin / Trash (`trash` crate; never falls back to permanent delete),
+  reveal in file manager (`explorer /select,` / `xdg-open`).
+- Shared `RecordingSession` in `nastro-record`, used by both the TUI and headless CLI.
+- Deliberately omitted: OSC 8 clickable paths. ratatui's cell buffer counts every
+  character of an escape sequence as visible, which corrupts layout.
+- Not yet exercised live: reveal-in-Explorer (opens a window) and the Linux TUI path
+  against a real Linux terminal/trash.
+- Placeholder: the `t` key / `nastro transcribe` report "not implemented" (Phase 7).
 
 ## Phase 6 - Packaging/CI/release
 - Release artifacts (Windows zip with both binaries side by side; Linux tarball).

@@ -16,7 +16,7 @@ edition = "2021"
 license = "MIT"
 authors = ["Spry Dynamics, LLC", "Tab Fitts"]
 repository = "https://dev.azure.com/sprydynamics/oss-tools/_git/nastro-rs"
-rust-version = "1.82"
+rust-version = "1.88"
 
 [workspace.dependencies]
 nastro-config = { path = "crates/nastro-config" }
@@ -36,6 +36,8 @@ sysinfo = "0.33"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 fs4 = { version = "1", features = ["sync"] }
 ctrlc = "3"
+ratatui = "0.30"
+trash = "5"
 
 [profile.release]
 opt-level = 3

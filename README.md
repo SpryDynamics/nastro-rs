@@ -4,15 +4,16 @@ A Rust port of [scaccogatto/nastro](https://github.com/scaccogatto/nastro) - a
 terminal-native call recorder (system audio + mic, local files, on-device
 transcription) - retargeted from **macOS-only** to **Windows + Linux**.
 
-> **Status: core recording pipeline works on Windows.** Config loading, the
-> recordings browser, session orchestration, and **real audio capture** are all
-> functional: `nastro record` actually records system audio + mic to a playable
-> file on Windows today (WASAPI, verified against real hardware). The Linux
-> capture backend compiles but is unvalidated (no Linux audio stack available in
-> this dev environment). Recordings are encoded to AAC/.m4a (fragmented MP4, so
-> they survive a crash) through an external `ffmpeg`. Transcription and the TUI
-> are not yet implemented. See [`CHANGELOG.md`](CHANGELOG.md) for exact scope and
-> [`docs/`](docs/) for the phased build plan.
+> **Status: recording and browsing work on Windows; transcription is not built
+> yet.** Run `nastro` for a full-screen terminal UI (browse, record, filter,
+> delete to the Recycle Bin, reveal in Explorer), or `nastro record` for headless
+> recording. Capture is verified against real hardware on Windows (WASAPI). The
+> Linux capture backend compiles and its UI is tested, but it has never run
+> against a real Linux audio stack (none is available in this dev environment).
+> Recordings are AAC/.m4a (fragmented MP4, so they survive a crash) via an
+> external `ffmpeg`. `nastro transcribe` and the `t` key are placeholders. See
+> [`CHANGELOG.md`](CHANGELOG.md) for exact scope and [`docs/`](docs/) for the
+> phased build plan.
 
 ## Why a port, and why these platform/format choices
 
@@ -44,7 +45,7 @@ crates/
   nastro-records/  filesystem-as-database scan/formatting (done)
   nastro-record/   recording session orchestration (done)
   nastro-audio/    capture/mixer core + platform backends (done; Windows-verified, Linux compile-only)
-  nastro-tui/      ratatui screens (scaffold)
+  nastro-tui/      ratatui screens + state machine (done)
 bin/
   nastro/          CLI/TUI entry point
   nastro-tap/      capture helper (spawned by nastro, talks over stdio)
@@ -77,12 +78,37 @@ cargo fmt --all -- --check
 ## Try it
 
 ```powershell
-cargo run --bin nastro -- records --plain
-cargo run --bin nastro -- records
-cargo run --bin nastro -- record --name "Weekly Sync"   # records real system audio + mic to audio.m4a (Windows)
+cargo run --bin nastro                                   # the TUI
+cargo run --bin nastro -- records --plain                # scriptable, tab-separated
+cargo run --bin nastro -- record --name "Weekly Sync"    # headless; Ctrl+C stops & saves
 ```
 
-Config is read from `%APPDATA%\nastro\config.toml` (Windows) /
+When stdin/stdout isn't a terminal (piped, redirected), `nastro` and
+`nastro records` print the plain table instead of opening the TUI.
+
+### TUI keys
+
+| Key | Action |
+| --- | --- |
+| `r` | record (name + capture mode; `Tab` cycles system+mic / mic only / system only) |
+| `s` / `q` / `Ctrl+C` | stop and save (while recording; under 2 seconds is discarded) |
+| `x` | discard the live recording (asks first) |
+| `Enter` | open a recording (shows a transcript preview if one exists) |
+| `o` | reveal in Explorer / file manager |
+| `d` | delete to the Recycle Bin / Trash (asks first; only `y` confirms) |
+| `/` | filter by name |
+| `j` `k` / arrows, `g` `G` | move, first, last |
+| `?` | help |
+| `q` / `Esc` | back / quit |
+
+Delete never falls back to a permanent delete: if the Recycle Bin / Trash can't be
+used you get an error and nothing is removed.
+
+### Config
+
+`--config <path>` (or the `NASTRO_CONFIG` environment variable) selects a config
+file explicitly; a file you name that fails to parse is an error rather than a
+silent fall back to defaults. Otherwise config is read from `%APPDATA%\nastro\config.toml` (Windows) /
 `~/.config/nastro/config.toml` (Linux); see `nastro-config`'s `ConfigFile` for the
 available keys. A missing config file is not an error - sane defaults apply
 (`~/Recordings/nastro`, `large-v3-turbo`, etc.).

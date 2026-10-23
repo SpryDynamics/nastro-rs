@@ -1,7 +1,6 @@
-use chrono::{Datelike, Timelike};
 use clap::{Parser, Subcommand};
 use nastro_config::Config;
-use nastro_record::{CaptureMode, LockError, TapExitKind};
+use nastro_record::{CaptureMode, Outcome, RecordingSession, SessionError};
 
 #[derive(Parser)]
 #[command(
@@ -10,6 +9,10 @@ use nastro_record::{CaptureMode, LockError, TapExitKind};
     about = "Terminal-native call recorder: system audio + mic, local files, on-device transcription."
 )]
 struct Cli {
+    /// Use this config file instead of the default location (also: NASTRO_CONFIG).
+    #[arg(long, global = true, value_name = "PATH")]
+    config: Option<std::path::PathBuf>,
+
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -38,20 +41,13 @@ enum Command {
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    let config = Config::load().unwrap_or_else(|err| {
-        eprintln!("warning: failed to load config ({err}); using defaults");
-        let home = directories::BaseDirs::new()
-            .map(|d| d.home_dir().to_path_buf())
-            .unwrap_or_else(|| std::path::PathBuf::from("."));
-        Config::default_with_home(&home)
-    });
+    let explicit = cli
+        .config
+        .or_else(|| std::env::var_os("NASTRO_CONFIG").map(std::path::PathBuf::from));
+    let config = load_config(explicit.as_deref())?;
 
     match cli.command {
-        None => {
-            println!("nastro: TUI not yet implemented in the Rust port (coming in a later phase).");
-            println!("Use `nastro records --plain` or `nastro record` in the meantime.");
-            Ok(())
-        }
+        None => run_tui_or_list(&config),
         Some(Command::Record {
             name,
             mic_only,
@@ -66,7 +62,8 @@ fn main() -> anyhow::Result<()> {
             };
             run_record(&config, name, mode)
         }
-        Some(Command::Records { plain }) => run_records(&config, plain),
+        Some(Command::Records { plain: true }) => run_records(&config, true),
+        Some(Command::Records { plain: false }) => run_tui_or_list(&config),
         Some(Command::Transcribe { id }) => {
             println!("nastro transcribe {id}: not yet implemented in the Rust port.");
             Ok(())
@@ -75,78 +72,91 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run_record(config: &Config, name: Option<String>, mode: CaptureMode) -> anyhow::Result<()> {
-    if let Ok(Some(warning)) = nastro_record::check_low_disk_space(&config.output_dir) {
-        eprintln!("{warning}");
-    }
-
-    let lock =
-        match nastro_record::acquire_lock(&config.output_dir, &nastro_record::is_process_alive) {
-            Ok(lock) => lock,
-            Err(LockError::AlreadyRecording { pid }) => {
-                eprintln!("error: a recording is already in progress (pid {pid}).");
-                std::process::exit(1);
-            }
-            Err(err) => return Err(err.into()),
-        };
-
-    let now = chrono::Local::now();
-    let slug = name
-        .as_deref()
-        .map(nastro_record::slugify)
-        .filter(|s| !s.is_empty());
-    let dir_name = nastro_records::build_dir_name(
-        now.year(),
-        now.month(),
-        now.day(),
-        now.hour(),
-        now.minute(),
-        slug.as_deref(),
-    );
-    let record_dir = config.output_dir.join(&dir_name);
-    std::fs::create_dir_all(&record_dir)?;
-    let _ = nastro_config::mode::ensure_private_dir(&record_dir);
-    let audio_path = record_dir.join("audio.m4a");
-
-    let Some(tap_path) = nastro_record::resolve_tap_path() else {
-        eprintln!("error: nastro-tap not found next to the current executable or on PATH.");
-        drop(lock);
-        std::process::exit(1);
-    };
-
-    println!("Recording to {}", record_dir.display());
-
-    let mut tap = nastro_record::TapProcess::spawn(&tap_path, &audio_path, mode)?;
-    let pid = tap.pid();
-
-    let stop_requested = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let stop_requested_handler = std::sync::Arc::clone(&stop_requested);
-    ctrlc::set_handler(move || {
-        stop_requested_handler.store(true, std::sync::atomic::Ordering::SeqCst);
-        let _ = nastro_record::request_graceful_stop(pid);
-    })?;
-
-    println!("Press Ctrl+C to stop...");
-
-    let desc = loop {
-        if let Some(desc) = tap.try_exit() {
-            break desc;
-        }
-        if stop_requested.load(std::sync::atomic::Ordering::SeqCst) {
-            break tap.wait_with_timeout(std::time::Duration::from_secs(5));
-        }
-        std::thread::sleep(std::time::Duration::from_millis(100));
-    };
-    drop(lock);
-
-    match desc.kind {
-        TapExitKind::Clean => {
-            println!("{}", desc.message);
-            Ok(())
-        }
-        TapExitKind::PermissionDenied | TapExitKind::Failed => {
-            eprintln!("{}", desc.message);
+    let session = match RecordingSession::start(&config.output_dir, name.as_deref(), mode) {
+        Ok(session) => session,
+        Err(err @ SessionError::AlreadyRecording { .. }) | Err(err @ SessionError::TapNotFound) => {
+            eprintln!("error: {err}.");
             std::process::exit(1);
         }
+        Err(err) => return Err(err.into()),
+    };
+
+    if let Some(warning) = session.warning() {
+        eprintln!("{warning}");
+    }
+    println!("Recording to {}", session.record_dir().display());
+    println!("Press Ctrl+C to stop...");
+
+    let stop_requested = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let handler_flag = std::sync::Arc::clone(&stop_requested);
+    ctrlc::set_handler(move || {
+        handler_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+    })?;
+
+    // An Option so the session can be consumed by `stop()` on one path and still be
+    // dropped (releasing the lock) before any `process::exit`, which skips destructors.
+    let mut session = Some(session);
+    let end = loop {
+        let live = session
+            .as_mut()
+            .expect("session is only taken on the way out");
+        if let Some(end) = live.try_finish() {
+            break end;
+        }
+        if stop_requested.load(std::sync::atomic::Ordering::SeqCst) {
+            break session.take().expect("still live").stop();
+        }
+        let secs = live.elapsed().as_secs();
+        print!("\r{:02}:{:02}  ", secs / 60, secs % 60);
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    };
+    println!();
+    drop(session); // release the lock and sleep guard before we may exit()
+
+    match end.outcome {
+        Outcome::Saved => {
+            println!("Saved {}", end.record_dir.display());
+            Ok(())
+        }
+        Outcome::DiscardedTooShort => {
+            println!("Recording was under 2 seconds - discarded.");
+            Ok(())
+        }
+        Outcome::DiscardedByUser => {
+            println!("Recording discarded.");
+            Ok(())
+        }
+        Outcome::FailedNoAudio => {
+            eprintln!("{}", end.exit.message);
+            std::process::exit(1);
+        }
+    }
+}
+fn load_config(explicit: Option<&std::path::Path>) -> anyhow::Result<Config> {
+    let home = directories::BaseDirs::new()
+        .map(|d| d.home_dir().to_path_buf())
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+    match explicit {
+        // A path the user asked for must load: silently falling back to defaults
+        // would record into a directory they did not choose.
+        Some(path) => Ok(Config::load_from(path, &home)?),
+        None => Ok(Config::load().unwrap_or_else(|err| {
+            eprintln!("warning: failed to load config ({err}); using defaults");
+            Config::default_with_home(&home)
+        })),
+    }
+}
+
+/// Open the TUI when attached to a terminal; otherwise (piped, redirected, CI) fall
+/// back to the plain table so scripts never get an unusable full-screen UI.
+fn run_tui_or_list(config: &Config) -> anyhow::Result<()> {
+    use std::io::IsTerminal;
+    if std::io::stdin().is_terminal() && std::io::stdout().is_terminal() {
+        Ok(nastro_tui::run(config)?)
+    } else {
+        run_records(config, false)
     }
 }
 

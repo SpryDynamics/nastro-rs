@@ -12,6 +12,7 @@ mod exit;
 mod level;
 mod lock;
 mod process;
+mod session;
 mod sleep_guard;
 mod slug;
 mod stop;
@@ -23,6 +24,9 @@ pub use exit::{describe_tap_exit, TapExitDescription, TapExitKind};
 pub use level::{parse_level_line, LevelReading};
 pub use lock::{acquire_lock, lock_path, LockError, LockHandle};
 pub use process::is_process_alive;
+pub use session::{
+    decide_outcome, record_dir_name, Outcome, RecordingSession, SessionEnd, SessionError,
+};
 pub use sleep_guard::{prevent_sleep, SleepGuard};
 pub use slug::slugify;
 pub use stop::request_graceful_stop;

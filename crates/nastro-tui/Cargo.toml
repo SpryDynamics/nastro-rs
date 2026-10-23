@@ -9,5 +9,11 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ratatui.workspace = true
+trash.workspace = true
 nastro-config.workspace = true
 nastro-records.workspace = true
+nastro-record.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

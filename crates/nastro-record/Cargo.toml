@@ -12,6 +12,7 @@ rust-version.workspace = true
 thiserror.workspace = true
 sysinfo.workspace = true
 fs4.workspace = true
+chrono.workspace = true
 nastro-config.workspace = true
 nastro-records.workspace = true
 

@@ -22,3 +22,8 @@ nastro-config.workspace = true
 nastro-records.workspace = true
 nastro-record.workspace = true
 nastro-tui.workspace = true
+
+[dev-dependencies]
+portable-pty = "0.9"
+vt100 = "0.18"
+tempfile = "3"

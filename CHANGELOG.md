@@ -6,6 +6,52 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (Phase 5 - terminal UI)
+
+- `nastro` (no args) and `nastro records` open a full-screen `ratatui` UI when attached
+  to a terminal, and print the plain table when piped. Screens: list (with `/` filter),
+  name form (capture-mode picker), live recording (timer + dB-scaled level meters),
+  detail (transcript preview), help, and `y`-to-confirm delete/discard modals.
+- Architecture: `nastro-tui::app` is a pure state machine (key in, `Effect`s out, no
+  I/O), `view` renders it, `actions` does the OS work, `lib.rs` is the event loop. 58
+  unit tests, including render tests that assert on actual screen content via
+  ratatui's `TestBackend`.
+- Delete moves a recording to the Recycle Bin / Trash and was verified to land in this
+  machine's real Recycle Bin. It deliberately does **not** fall back to a permanent
+  delete when the trash is unavailable (the original macOS build did); you get an error
+  and nothing is removed.
+- New `RecordingSession` in `nastro-record` (lock, directory, anti-sleep, supervised
+  `nastro-tap`, bounded stop), shared by the TUI and the headless CLI. 13 new tests.
+- End-to-end tests run the real `nastro` in a real pseudo-terminal (ConPTY on Windows)
+  with real keystrokes and read the screen back through a terminal emulator
+  (`bin/nastro/tests/tui_pty.rs`). Three run by default; three `#[ignore]`d live tests
+  need a microphone, ffmpeg and a built `nastro-tap` and cover recording through the TUI,
+  discarding a live recording, and headless `nastro record` stopped by Ctrl+C. (A
+  fourth ignored test, in `nastro-tui`, really moves a directory to the Recycle Bin.)
+  A negative control confirmed the "terminal restored on exit" assertion does fail when
+  `restore()` is removed.
+- `--config <path>` / `NASTRO_CONFIG` selects a config file explicitly. A file you name
+  that fails to parse is a hard error rather than a silent fall back to defaults.
+- Recordings started in the same minute with the same name no longer share a directory
+  (second gets a `-2` suffix) - previously the second would overwrite the first's audio.
+
+### Fixed
+
+- Headless `nastro record` never held the anti-sleep guard (Phase 2 documented it but
+  `run_record` didn't call it) and never applied the under-2-seconds discard rule. Both
+  now come from the shared session.
+- A failed `nastro record` left a stale `.lock` behind: `process::exit` skips
+  destructors, so the lock guard never dropped. Found by running the failure path by
+  hand; the session is now dropped before exiting.
+- Declared MSRV was wrong: `rust-version` said 1.82 but `wasapi`, `indexmap` and `clap`
+  already need 1.85, and `ratatui` 0.30 needs 1.88. Now 1.88.
+
+### Notes
+
+- The Windows-only ConPTY quirk worth knowing: it sends a cursor-position query
+  (`ESC[6n`) at startup and withholds *all* output until the host terminal answers. The
+  test harness answers it like a real terminal; nastro itself needed no change.
+
 ### Changed (Phase 4 - AAC/.m4a encoding via ffmpeg)
 
 - `nastro-tap` now encodes to real **AAC in fragmented MP4** by piping mixed 16-bit
