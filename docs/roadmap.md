@@ -30,14 +30,15 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - Windows: `wasapi` crate, loopback capture on the default render endpoint + normal
   mic capture, both shared-mode with `autoconvert`. **Verified against real
   hardware**: both sources captured real, correctly-rated audio.
-- Linux: system audio via `libpulse-binding`/`libpulse-simple-binding` opening
-  `<default-sink>.monitor` (device name resolved via `pactl get-default-sink`;
-  works under both PulseAudio and PipeWire's pulse-compat layer); mic via the
-  same blocking `Simple` API against the default source. **Compiles under CI's
-  Linux leg only - not validated against real hardware** (no Linux audio stack
-  available in this environment). `cpal` was considered for mic capture but
-  dropped in favor of reusing the same Pulse `Simple` API for both sources,
-  avoiding a second audio stack dependency.
+- Linux: system audio via `libpulse-binding`/`libpulse-simple-binding` opening the
+  server-resolved `@DEFAULT_MONITOR@` (falling back to `pactl get-default-sink` +
+  `.monitor`); mic via the same blocking `Simple` API against the default source.
+  Both are meant to work under PulseAudio and PipeWire's pulse-compat layer.
+  **Verified (Phase 6) against a real PulseAudio-protocol server - WSLg on Ubuntu
+  24.04 - for opening, reading, encoding and stopping.** Only silence was observed
+  there, so audio content, and a native PipeWire/PulseAudio desktop, remain
+  unverified. `cpal` was considered for mic capture but dropped in favor of reusing
+  the same Pulse `Simple` API for both sources, avoiding a second audio stack.
 - Not yet implemented: `IMMNotificationClient`/Pulse-subscribe-API device-change
   handling (reacting to the default device changing mid-recording) - deferred,
   not blocking for a first working capture path.
@@ -64,10 +65,16 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
   against a real Linux terminal/trash.
 - Placeholder: the `t` key / `nastro transcribe` report "not implemented" (Phase 7).
 
-## Phase 6 - Packaging/CI/release
-- Release artifacts (Windows zip with both binaries side by side; Linux tarball).
-- Windows binaries signed via `az-artifact-sign` (separate tool,
-  `dev.azure.com/sprydynamics/oss-tools/_git/az-artifact-sign`).
+## Phase 6 - Packaging/CI/release (done; see `docs/releasing.md`)
+- Release artifacts: Windows zip and Linux tarball, each with both binaries, the
+  license files and a `REQUIREMENTS.txt`, plus `SHA256SUMS`. Built `--locked`.
+- Windows binaries signed (and RFC 3161 timestamped) via `az-artifact-sign` using a
+  secretless, workload-identity-federated service connection whose only Azure
+  permission is Signer on the single certificate profile; branch-restricted.
+- The shipped archives are verified, not just built: signatures checked on the
+  extracted binaries, the Linux tarball smoke-tested (`ldd`, checksum), and both
+  downloaded and run on real machines.
+- Not done: GitHub mirror/release, aarch64, installers (MSI/winget/deb).
 
 ## Phase 7 - Transcription (deferred)
 - `nastro-transcribe` crate wrapping `whisper-rs` (vendored whisper.cpp), ggml model

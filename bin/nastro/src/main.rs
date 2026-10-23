@@ -141,7 +141,17 @@ fn load_config(explicit: Option<&std::path::Path>) -> anyhow::Result<Config> {
     match explicit {
         // A path the user asked for must load: silently falling back to defaults
         // would record into a directory they did not choose.
-        Some(path) => Ok(Config::load_from(path, &home)?),
+        Some(path) => {
+            // `load_from` treats a missing file as "use defaults", which is right for
+            // the implicit location but wrong here: a typo in --config must not
+            // quietly record into a directory the user never chose.
+            anyhow::ensure!(
+                path.is_file(),
+                "config file not found: {} (set by --config or NASTRO_CONFIG)",
+                path.display()
+            );
+            Ok(Config::load_from(path, &home)?)
+        }
         None => Ok(Config::load().unwrap_or_else(|err| {
             eprintln!("warning: failed to load config ({err}); using defaults");
             Config::default_with_home(&home)

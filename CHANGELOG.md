@@ -6,6 +6,61 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (Phase 6 - release packaging and signing)
+
+- `eng/package.ps1` packages built release binaries into
+  `nastro-<ver>-<os>-<arch>.zip` / `.tar.gz` with a `sha256sum`-compatible checksum.
+  Each archive carries `LICENSE`, `NOTICE.md`, `THIRD_PARTY_NOTICES.md`, `README.md`,
+  `CHANGELOG.md` and a `REQUIREMENTS.txt`; the script fails if any is missing.
+- `azure-pipelines-release.yml` (`nastro-rs-release`): runs on `v*` tags or by hand,
+  builds with `--locked`, requires the tag to equal the `Cargo.toml` version, signs the
+  Windows binaries, unpacks the *shipped* zip and runs `signtool verify` on what's in
+  it, smoke-tests the Linux tarball (runs it, `ldd`, checksum), and writes `SHA256SUMS`.
+- Windows signing uses `az-artifact-sign` 0.1.0 (pinned, as is the `sign` CLI it drives)
+  through a new service connection `nastro-artifact-signing`. It uses workload identity
+  federation, so **there is no secret**; the Entra app has no password or certificate
+  credentials, one federated credential bound to that connection, and a single Azure role
+  - *Artifact Signing Certificate Profile Signer* on the one certificate profile. Only the
+  release pipeline may use the connection and a branch-control check limits it to `main` and
+  `v*` tags. Details and rebuild steps are in `docs/releasing.md`.
+- Verified on the published artifacts of a real pipeline run: checksums match; the
+  extracted Windows binaries verify with `signtool` (issued to Spry Dynamics. LLC,
+  timestamped) and run; the Linux tarball runs on a real Ubuntu 24.04 with executable bits
+  and libpulse resolved.
+
+### Fixed (found by running the packaged Linux artifact on real Ubuntu)
+
+- **SIGTERM/SIGHUP killed a recording ungracefully.** `ctrlc` only handled SIGINT, so
+  `kill`, `timeout`, a service manager, or closing the terminal window left a stale lock and
+  an unfinalized recording. Enabled `ctrlc`'s `termination` feature (also CTRL_CLOSE /
+  LOGOFF / SHUTDOWN on Windows); the TUI now saves a live recording before exiting. Re-run
+  on the CI-built artifact: stopped by SIGTERM after 8s, it printed `Saved`, released the
+  lock, left no orphan process, and wrote a valid 8.0s AAC file with matching metadata.
+- **System-audio capture on Linux needed `pactl`** only to look up the default sink, and
+  failed with an unhelpful "no capture device" without it. It now asks the server for
+  `@DEFAULT_MONITOR@` (PulseAudio and PipeWire-pulse resolve it); `pactl` is only a
+  fallback. Re-run on the CI-built artifact with no `pactl` installed: system capture
+  started, reported levels and produced a file.
+- **`nastro-tap` panicked on a broken pipe** when its parent vanished (`println!`). It now
+  stops cleanly so ffmpeg can finalize, instead of recording on with nobody to stop it.
+- **An explicit `--config` / `NASTRO_CONFIG` pointing at a missing file silently fell back
+  to defaults** (my Phase 5 guard only covered files that failed to *parse*), so a typo
+  recorded into a directory you never chose. It is now an error. The first real symptom was
+  a test recording landing in the WSL home directory. New `bin/nastro/tests/cli.rs` covers
+  it, and a negative control confirmed the tests fail without the guard.
+- `REQUIREMENTS.txt` formatting; `pactl` documented as optional.
+
+### Notes
+
+- The Linux capture backend had never actually run before this phase. WSLg's
+  PulseAudio server let it open, read, encode and stop for both mic and system sources.
+  Only silence was observed (nothing was playing, no mic signal), so audio *content*
+  and a native PipeWire/PulseAudio desktop remain unverified.
+- The signature check on the Linux side of CI is `ldd`-and-run only; there is no
+  equivalent signing for Linux archives (checksums only).
+- New unix-only pty test: SIGTERM and SIGHUP must exit 0 and restore the terminal. It could
+  not be run on this Windows machine; it is exercised by the Linux CI leg.
+
 ### Added (Phase 5 - terminal UI)
 
 - `nastro` (no args) and `nastro records` open a full-screen `ratatui` UI when attached

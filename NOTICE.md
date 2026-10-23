@@ -23,3 +23,11 @@ installs FFmpeg is responsible for complying with the license of the build they
 chose. If a future release of this project ever *ships* an FFmpeg binary alongside
 `nastro`, that release must also carry FFmpeg's license text, its corresponding
 source offer, and a note of the exact build configuration.
+
+## Libraries linked dynamically
+
+The Linux build links the PulseAudio client libraries (`libpulse`, `libpulse-simple`;
+LGPL-2.1-or-later) as shared libraries from the host system. They are not bundled or
+modified, which is how the LGPL is satisfied: a user may replace them with any
+compatible version. Their license texts accompany the `libpulse-sys` /
+`libpulse-binding` crates listed in `THIRD_PARTY_NOTICES.md`.

@@ -7,11 +7,13 @@ transcription) - retargeted from **macOS-only** to **Windows + Linux**.
 > **Status: recording and browsing work on Windows; transcription is not built
 > yet.** Run `nastro` for a full-screen terminal UI (browse, record, filter,
 > delete to the Recycle Bin, reveal in Explorer), or `nastro record` for headless
-> recording. Capture is verified against real hardware on Windows (WASAPI). The
-> Linux capture backend compiles and its UI is tested, but it has never run
-> against a real Linux audio stack (none is available in this dev environment).
-> Recordings are AAC/.m4a (fragmented MP4, so they survive a crash) via an
-> external `ffmpeg`. `nastro transcribe` and the `t` key are placeholders. See
+> recording. Capture is verified against real hardware on Windows (WASAPI). On
+> Linux it has run against a real PulseAudio-protocol server (WSLg on Ubuntu
+> 24.04): mic and system capture both opened and produced valid files, but only
+> silence was observed, so audio *content* and a native PipeWire/PulseAudio
+> desktop are still unverified. Recordings are AAC/.m4a (fragmented MP4, so
+> they survive a crash) via an external `ffmpeg`. `nastro transcribe` and the
+> `t` key are placeholders. See
 > [`CHANGELOG.md`](CHANGELOG.md) for exact scope and [`docs/`](docs/) for the
 > phased build plan.
 
@@ -44,12 +46,18 @@ crates/
   nastro-config/   TOML config load/defaults (done)
   nastro-records/  filesystem-as-database scan/formatting (done)
   nastro-record/   recording session orchestration (done)
-  nastro-audio/    capture/mixer core + platform backends (done; Windows-verified, Linux compile-only)
+  nastro-audio/    capture/mixer core + platform backends (done; Windows-verified, Linux verified on WSLg PulseAudio)
   nastro-tui/      ratatui screens + state machine (done)
 bin/
   nastro/          CLI/TUI entry point
   nastro-tap/      capture helper (spawned by nastro, talks over stdio)
 ```
+
+## Install
+
+Download a release archive (see [`docs/releasing.md`](docs/releasing.md)), check it
+against `SHA256SUMS`, and unpack it. Keep `nastro` and `nastro-tap` in one folder. The
+Windows binaries are signed by Spry Dynamics, LLC. Nothing is installed system-wide.
 
 ## Requirements
 
