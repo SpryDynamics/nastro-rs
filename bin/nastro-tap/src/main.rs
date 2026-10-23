@@ -6,12 +6,12 @@
 //! exit-code contract.
 //!
 //! Captures real audio via `nastro-audio` (WASAPI on Windows, PulseAudio/PipeWire
-//! on Linux), mixes system + mic on a wall-clock schedule, and writes it
-//! incrementally to a WAV file (see `wav.rs` - an interim format pending Phase
-//! 4's AAC/M4A muxing) alongside a `metadata.json` duration sidecar, matching the
-//! `nastro-records` scan contract.
+//! on Linux), mixes system + mic on a wall-clock schedule, and encodes it
+//! incrementally to AAC/.m4a through an `ffmpeg` subprocess (see `encoder.rs`),
+//! alongside a `metadata.json` duration sidecar, matching the `nastro-records`
+//! scan contract.
 
-mod wav;
+mod encoder;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -29,13 +29,6 @@ const LEVEL_REPORT_INTERVAL: Duration = Duration::from_secs(1);
 /// `metadata.json` is rewritten on this cadence, matching the original macOS
 /// project's own 5s interval (cheap, low-value to do more often).
 const METADATA_FLUSH_INTERVAL: Duration = Duration::from_secs(5);
-/// The WAV header (see `wav.rs`) needs more frequent updates than metadata.json:
-/// unlike the fragmented-MP4 approach planned for Phase 4, a RIFF header's
-/// declared data size is what makes the *entire file* playable, so this bounds
-/// how much a hard kill can cost to "last second of audio" rather than "the
-/// whole recording looks like 0 bytes of data".
-const WAV_HEADER_FLUSH_INTERVAL: Duration = LEVEL_REPORT_INTERVAL;
-
 const EXIT_CLEAN: i32 = 0;
 const EXIT_PERMISSION_DENIED: i32 = 2;
 const EXIT_FAILED: i32 = 1;
@@ -87,10 +80,10 @@ fn run(args: Args) -> i32 {
         None
     };
 
-    let mut writer = match wav::WavWriter::create(&args.audio_path, TARGET_SAMPLE_RATE, 1) {
+    let mut writer = match encoder::M4aEncoder::start(&args.audio_path, TARGET_SAMPLE_RATE) {
         Ok(w) => w,
         Err(e) => {
-            eprintln!("Error: failed to create {}: {e}", args.audio_path.display());
+            eprintln!("Error: {e}");
             return EXIT_FAILED;
         }
     };
@@ -111,12 +104,15 @@ fn run(args: Args) -> i32 {
         &args.audio_path,
     );
 
-    // Order matters: stop capture threads before the final header flush so no
-    // more samples arrive mid-finalize.
+    // Order matters: stop the capture threads first so no more samples arrive,
+    // then close the encoder so ffmpeg flushes its final fragment.
     drop(system_capture);
     drop(mic_capture);
-    let _ = writer.finalize();
-    write_metadata(&args.audio_path, metadata_duration(&args.audio_path));
+    let duration = writer.duration_seconds();
+    if let Err(e) = writer.finish() {
+        eprintln!("Warning: ffmpeg did not shut down cleanly: {e}");
+    }
+    write_metadata(&args.audio_path, duration);
 
     exit_code
 }
@@ -136,7 +132,7 @@ fn handle_capture_start_error(label: &str, err: &CaptureError) -> i32 {
 fn capture_loop(
     sys_ring: &Arc<AudioRingBuffer>,
     mic_ring: &Arc<AudioRingBuffer>,
-    writer: &mut wav::WavWriter,
+    writer: &mut encoder::M4aEncoder,
     stop_flag: &Arc<AtomicBool>,
     audio_path: &std::path::Path,
 ) -> i32 {
@@ -146,7 +142,6 @@ fn capture_loop(
     let mut sys_level_peak: f32 = 0.0;
     let mut mic_level_peak: f32 = 0.0;
     let mut last_level_report = start;
-    let mut last_header_flush = start;
     let mut last_metadata_flush = start;
 
     while !stop_flag.load(Ordering::SeqCst) {
@@ -173,13 +168,6 @@ fn capture_loop(
             last_level_report = now;
         }
 
-        if now.duration_since(last_header_flush) >= WAV_HEADER_FLUSH_INTERVAL {
-            if let Err(e) = writer.flush_header() {
-                eprintln!("Warning: failed to flush WAV header: {e}");
-            }
-            last_header_flush = now;
-        }
-
         if now.duration_since(last_metadata_flush) >= METADATA_FLUSH_INTERVAL {
             write_metadata(audio_path, writer.duration_seconds());
             last_metadata_flush = now;
@@ -187,23 +175,6 @@ fn capture_loop(
     }
 
     EXIT_CLEAN
-}
-
-fn metadata_duration(audio_path: &std::path::Path) -> f64 {
-    // Recomputed from the just-finalized WAV header via its own duration
-    // tracking isn't available post-move; instead, metadata.json is kept in
-    // sync during the loop and this final call just re-uses the last known
-    // value by reading the file size back (good enough: the WAV header we just
-    // wrote already has the authoritative sample count).
-    let Ok(bytes) = std::fs::read(audio_path) else {
-        return 0.0;
-    };
-    if bytes.len() < 44 {
-        return 0.0;
-    }
-    let data_size = u32::from_le_bytes([bytes[40], bytes[41], bytes[42], bytes[43]]) as u64;
-    let frames = data_size / 2; // 16-bit mono
-    frames as f64 / TARGET_SAMPLE_RATE as f64
 }
 
 fn write_metadata(audio_path: &std::path::Path, duration_seconds: f64) {

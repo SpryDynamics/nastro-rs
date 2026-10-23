@@ -9,9 +9,9 @@ transcription) - retargeted from **macOS-only** to **Windows + Linux**.
 > functional: `nastro record` actually records system audio + mic to a playable
 > file on Windows today (WASAPI, verified against real hardware). The Linux
 > capture backend compiles but is unvalidated (no Linux audio stack available in
-> this dev environment). The audio format is an interim 16-bit WAV, not yet the
-> final AAC/.m4a (that's Phase 4). Transcription and the TUI are not yet
-> implemented. See [`CHANGELOG.md`](CHANGELOG.md) for exact scope and
+> this dev environment). Recordings are encoded to AAC/.m4a (fragmented MP4, so
+> they survive a crash) through an external `ffmpeg`. Transcription and the TUI
+> are not yet implemented. See [`CHANGELOG.md`](CHANGELOG.md) for exact scope and
 > [`docs/`](docs/) for the phased build plan.
 
 ## Why a port, and why these platform/format choices
@@ -50,6 +50,13 @@ bin/
   nastro-tap/      capture helper (spawned by nastro, talks over stdio)
 ```
 
+## Requirements
+
+- **FFmpeg** on `PATH` (or set `NASTRO_FFMPEG` to the executable). It is run as a
+  separate process to encode AAC/.m4a and is not bundled - see
+  [`NOTICE.md`](NOTICE.md). Windows: `winget install Gyan.FFmpeg`;
+  Debian/Ubuntu: `sudo apt install ffmpeg`.
+
 ## Build
 
 **Linux only**: install the PulseAudio dev headers/libs first (needed to link
@@ -72,7 +79,7 @@ cargo fmt --all -- --check
 ```powershell
 cargo run --bin nastro -- records --plain
 cargo run --bin nastro -- records
-cargo run --bin nastro -- record --name "Weekly Sync"   # records real system audio + mic to a .wav (Windows)
+cargo run --bin nastro -- record --name "Weekly Sync"   # records real system audio + mic to audio.m4a (Windows)
 ```
 
 Config is read from `%APPDATA%\nastro\config.toml` (Windows) /

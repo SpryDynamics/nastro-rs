@@ -6,6 +6,36 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed (Phase 4 - AAC/.m4a encoding via ffmpeg)
+
+- `nastro-tap` now encodes to real **AAC in fragmented MP4** by piping mixed 16-bit
+  mono PCM to an `ffmpeg` subprocess (`bin/nastro-tap/src/encoder.rs`), replacing the
+  interim WAV writer (removed). This also fixes a latent mismatch: `nastro record`
+  has always asked for `audio.m4a`, but the interim writer was putting WAV bytes in
+  that file.
+- Crash safety comes from the container, not header-rewriting tricks:
+  `empty_moov` + `frag_keyframe` + `frag_duration 1s`, and `-flush_packets 1`.
+  Prototyping showed that without `-flush_packets` ffmpeg holds everything in its
+  output buffer until close (only a 28-byte `ftyp` hit the disk after 5s), which
+  would have defeated the fragmenting - so that flag is required, and is covered by
+  a unit test.
+- Verified against real hardware on Windows: a hard-killed `nastro-tap` (simulated
+  crash) after ~7s left a valid AAC / 48 kHz / mono file of 7.0s that decodes with no
+  errors, and no orphaned ffmpeg process. A graceful stop through the real
+  `TapProcess`/`request_graceful_stop` path produced a clean exit with decoded
+  duration matching the recorded duration (live test `crates/nastro-record/tests/
+  live_tap.rs`, `#[ignore]`d - needs audio hardware + ffmpeg).
+- ffmpeg is spawned in its own process group so the graceful-stop signal aimed at
+  `nastro-tap` doesn't reach it independently. A negative-control run showed ffmpeg
+  also finalizes cleanly if it *does* receive CTRL_BREAK on Windows, so this is
+  precautionary hygiene, not a fix for an observed failure.
+- ffmpeg is a runtime dependency (override path with `NASTRO_FFMPEG`); a missing
+  ffmpeg produces an actionable install message and exit code 1. It is invoked as a
+  separate process and not bundled - see `NOTICE.md` for the license position.
+- 10 new unit tests (pure arg-building and PCM conversion, plus a real-ffmpeg
+  round trip that skips itself where ffmpeg is absent). CI now installs ffmpeg on
+  both legs so that round trip actually runs.
+
 ### Added (Phase 3 - audio capture, `nastro-audio` + `nastro-tap`)
 
 - `nastro-audio` pure mixer core, ported from the original Swift

@@ -34,6 +34,18 @@ stages:
             displayName: Install libpulse-dev (Linux audio backend link dependency)
             condition: eq(variables['imageName'], 'ubuntu-latest')
 
+          # ffmpeg is a runtime dependency of nastro-tap (invoked as a subprocess, never
+          # linked). Installed here so the encoder's real-ffmpeg round-trip test runs
+          # instead of skipping itself.
+          - script: sudo apt-get install -y ffmpeg
+            displayName: Install ffmpeg (Linux)
+            condition: eq(variables['imageName'], 'ubuntu-latest')
+
+          - script: choco install ffmpeg -y --no-progress
+            displayName: Install ffmpeg (Windows)
+            condition: eq(variables['imageName'], 'windows-latest')
+            continueOnError: true
+
           - script: cargo build --workspace --all-targets
             displayName: Build
 

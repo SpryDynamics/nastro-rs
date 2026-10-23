@@ -12,3 +12,14 @@ Original project: Copyright (c) scaccogatto, MIT License.
 
 See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for this project's own Rust
 dependency licenses.
+
+## External runtime tools (not bundled)
+
+`nastro-tap` encodes audio by running **FFmpeg** (<https://ffmpeg.org>) as a separate
+subprocess. FFmpeg is **not** linked into, compiled into, or redistributed with this
+project, so its license does not attach to nastro's own code. FFmpeg builds are
+licensed LGPL-2.1+ or GPL-2.0+ depending on how they were configured; whoever
+installs FFmpeg is responsible for complying with the license of the build they
+chose. If a future release of this project ever *ships* an FFmpeg binary alongside
+`nastro`, that release must also carry FFmpeg's license text, its corresponding
+source offer, and a note of the exact build configuration.

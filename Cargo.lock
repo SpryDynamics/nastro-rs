@@ -640,6 +640,7 @@ dependencies = [
  "nastro-config",
  "nastro-records",
  "nix 0.29.0",
+ "serde_json",
  "sysinfo",
  "tempfile",
  "thiserror 1.0.69",
@@ -665,6 +666,7 @@ dependencies = [
  "nastro-audio",
  "serde_json",
  "tempfile",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

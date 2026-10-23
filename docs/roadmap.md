@@ -41,14 +41,16 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - Not yet implemented: `IMMNotificationClient`/Pulse-subscribe-API device-change
   handling (reacting to the default device changing mid-recording) - deferred,
   not blocking for a first working capture path.
-- `nastro-tap` wired to real capture end-to-end, with an interim 16-bit PCM WAV
-  writer (periodic header rewrite for crash safety) standing in for Phase 4's
-  AAC/M4A muxing.
+- `nastro-tap` wired to real capture end-to-end (initially with a throwaway WAV
+  writer, replaced by the Phase 4 AAC/M4A encoder).
 
-## Phase 4 - Incremental AAC/M4A muxing
+## Phase 4 - Incremental AAC/M4A muxing (done)
 - `ffmpeg` subprocess, PCM piped via stdin, fragmented-MP4 flags
-  (`+frag_keyframe+empty_moov+default_base_moof`) for crash safety.
+  (`+frag_keyframe+empty_moov+default_base_moof`, `-frag_duration 1s`,
+  `-flush_packets 1`) for crash safety. Replaced the interim WAV writer.
 - `metadata.json` duration writer (every 5s, matching the original cadence).
+- Not yet done: `nastro transcribe`'s 16 kHz resample step (Phase 7) will reuse this
+  same ffmpeg dependency.
 
 ## Phase 5 - TUI/CLI (`nastro-tui`, `bin/nastro`)
 - `ratatui` + `crossterm` port of list/name-form/recording/detail/help screens.
