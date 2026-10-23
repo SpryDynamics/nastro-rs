@@ -10,6 +10,7 @@ rust-version.workspace = true
 
 [dependencies]
 ratatui.workspace = true
+ctrlc.workspace = true
 trash.workspace = true
 nastro-config.workspace = true
 nastro-records.workspace = true

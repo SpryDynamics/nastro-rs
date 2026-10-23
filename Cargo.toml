@@ -35,7 +35,7 @@ directories = "5"
 sysinfo = "0.33"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 fs4 = { version = "1", features = ["sync"] }
-ctrlc = "3"
+ctrlc = { version = "3", features = ["termination"] }
 ratatui = "0.30"
 trash = "5"
 

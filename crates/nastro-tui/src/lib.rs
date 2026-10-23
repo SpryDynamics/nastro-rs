@@ -9,6 +9,8 @@ pub mod app;
 pub mod view;
 
 use std::io;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 use nastro_config::Config;
@@ -30,21 +32,47 @@ fn scan(config: &Config) -> io::Result<Vec<nastro_records::Record>> {
 /// including panics (ratatui installs a panic hook for this).
 pub fn run(config: &Config) -> io::Result<()> {
     let records = scan(config)?;
+
+    // In raw mode Ctrl+C is an ordinary key, so this only fires for the ways a
+    // recording usually gets cut short from outside: closing the terminal window
+    // (SIGHUP / CTRL_CLOSE), `kill` (SIGTERM), logoff or shutdown. Without it the
+    // process would die at once, leaving the capture helper to notice on its own and
+    // the recording unfinalized.
+    let terminate = Arc::new(AtomicBool::new(false));
+    let flag = Arc::clone(&terminate);
+    // Fails only if a handler is already installed; the flag then just never fires.
+    let _ = ctrlc::set_handler(move || flag.store(true, Ordering::SeqCst));
+
     let mut terminal = ratatui::try_init()?;
     let result = event_loop(
         &mut terminal,
         config,
         App::new(records, config.output_dir.clone()),
+        &terminate,
     );
     ratatui::restore();
     result
 }
 
-fn event_loop(terminal: &mut DefaultTerminal, config: &Config, mut app: App) -> io::Result<()> {
+fn event_loop(
+    terminal: &mut DefaultTerminal,
+    config: &Config,
+    mut app: App,
+    terminate: &AtomicBool,
+) -> io::Result<()> {
     let mut session: Option<RecordingSession> = None;
 
     loop {
         terminal.draw(|frame| view::draw(frame, &app))?;
+
+        if terminate.load(Ordering::SeqCst) {
+            // Save what has been recorded (the 2-second rule still applies) rather
+            // than abandoning a live capture.
+            if let Some(s) = session.take() {
+                s.stop();
+            }
+            return Ok(());
+        }
 
         if event::poll(TICK)? {
             if let Event::Key(key) = event::read()? {

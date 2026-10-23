@@ -368,3 +368,32 @@ fn live_headless_record_stops_and_saves_on_ctrl_c() {
     assert!(size > 1_000, "audio.m4a only {size} bytes");
     assert!(!recordings.join(".lock").exists(), "lock must be released");
 }
+
+/// A terminal being closed (SIGHUP) or the process being asked to stop (SIGTERM) must
+/// shut the TUI down cleanly and give the terminal back, not just die in raw mode on
+/// the alternate screen. Unix-only: it uses `kill`.
+#[cfg(unix)]
+#[test]
+fn sigterm_exits_cleanly_and_restores_the_terminal() {
+    for signal in ["-TERM", "-HUP"] {
+        let tmp = tempfile::tempdir().unwrap();
+        let config = seed(tmp.path());
+        let mut t = Term::launch(&config);
+
+        t.wait_for("3 recordings");
+        let pid = t.child.process_id().expect("child pid");
+        let status = std::process::Command::new("kill")
+            .arg(signal)
+            .arg(pid.to_string())
+            .status()
+            .expect("run kill");
+        assert!(status.success(), "kill {signal} failed");
+
+        assert!(t.wait_exit(), "should exit 0 after {signal}");
+        let raw = String::from_utf8_lossy(&t.raw.lock().unwrap()).into_owned();
+        assert!(
+            raw.contains("\x1b[?1049l"),
+            "{signal}: must leave the alternate screen"
+        );
+    }
+}

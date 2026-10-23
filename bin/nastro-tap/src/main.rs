@@ -13,6 +13,7 @@
 
 mod encoder;
 
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -161,8 +162,18 @@ fn capture_loop(
         }
 
         if now.duration_since(last_level_report) >= LEVEL_REPORT_INTERVAL {
-            println!("level sys={sys_level_peak:.2} mic={mic_level_peak:.2}");
-            let _ = std::io::Write::flush(&mut std::io::stdout());
+            // If nastro (our parent) has gone away, stdout is a broken pipe. `println!`
+            // would panic on that; instead treat it as "nobody is listening" and stop
+            // cleanly so the encoder can finalize the file, rather than recording on
+            // with the microphone open and no one to stop us.
+            let mut out = std::io::stdout();
+            if writeln!(out, "level sys={sys_level_peak:.2} mic={mic_level_peak:.2}")
+                .and_then(|()| out.flush())
+                .is_err()
+            {
+                eprintln!("Parent process closed the pipe; stopping.");
+                return EXIT_CLEAN;
+            }
             sys_level_peak = 0.0;
             mic_level_peak = 0.0;
             last_level_report = now;

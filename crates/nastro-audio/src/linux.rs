@@ -3,9 +3,10 @@
 //! System audio: PulseAudio's "monitor source" of the default sink, via the
 //! blocking `libpulse-simple-binding` API - this also works transparently under
 //! PipeWire, since PipeWire implements the PulseAudio protocol
-//! (`pipewire-pulse`). The default sink's monitor name is resolved by shelling
-//! out to `pactl get-default-sink` rather than pulling in the full async
-//! Context/Introspector API, keeping this backend's surface small.
+//! (`pipewire-pulse`). The monitor is requested by the server-resolved name
+//! `@DEFAULT_MONITOR@`; only if that is refused do we fall back to asking
+//! `pactl get-default-sink`, rather than pulling in the full async
+//! Context/Introspector API and keeping this backend's surface small.
 //!
 //! Microphone: the same blocking `Simple` API, opened against the default
 //! source (no device override needed).
@@ -25,9 +26,28 @@ use crate::AudioRingBuffer;
 
 const READ_CHUNK_BYTES: usize = 4096;
 
+/// Special source name that a PulseAudio server (and PipeWire's pulse server) resolve,
+/// server-side, to the monitor of whatever the current default sink is. Needs no helper
+/// program, and tracks the default sink as of the moment capture starts.
+const DEFAULT_MONITOR: &str = "@DEFAULT_MONITOR@";
+
 pub fn start_system_capture(sink: Arc<AudioRingBuffer>) -> Result<CaptureHandle, CaptureError> {
-    let monitor_device = default_sink_monitor_name()?;
-    spawn_pulse_capture("system", Some(monitor_device), sink)
+    let first_error = match spawn_pulse_capture(
+        "system",
+        Some(DEFAULT_MONITOR.to_string()),
+        Arc::clone(&sink),
+    ) {
+        Ok(handle) => return Ok(handle),
+        Err(e) => e,
+    };
+
+    // A server that doesn't understand the special name: resolve the default sink's
+    // monitor ourselves with `pactl`. If pactl isn't installed either, report the
+    // server's own error, which is the informative one.
+    match default_sink_monitor_name() {
+        Ok(name) => spawn_pulse_capture("system", Some(name), sink),
+        Err(_) => Err(first_error),
+    }
 }
 
 pub fn start_mic_capture(sink: Arc<AudioRingBuffer>) -> Result<CaptureHandle, CaptureError> {

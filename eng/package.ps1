@@ -72,11 +72,13 @@ if (-not $onWindows) {
 
   * PulseAudio client library (libpulse0) - present on virtually every desktop
     distribution, including PipeWire systems via pipewire-pulse. Dynamically linked.
-  * 'pactl' (pulseaudio-utils) to locate the default output for system-audio capture.
+  * 'pactl' (pulseaudio-utils) is optional: only used as a fallback to find the default
+    output if the sound server refuses the standard '@DEFAULT_MONITOR@' name.
   * 'xdg-open' for "reveal in file manager".
 "@
 }
 $requirements += @"
+
 
 Keep nastro and nastro-tap in the same folder: nastro finds its capture helper
 next to itself first, then on PATH.
