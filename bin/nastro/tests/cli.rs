@@ -79,3 +79,54 @@ fn a_valid_explicit_config_selects_the_recordings_directory() {
     assert!(line.contains("1:05"), "{line}");
     assert!(line.contains('\t'), "plain output is tab-separated: {line}");
 }
+
+/// `nastro records --plain | head` closes the pipe while nastro is still printing. That must end quietly (like any
+/// Unix tool), not panic with "failed printing to stdout: Broken pipe" and exit 101, which is what `println!` does.
+#[test]
+fn a_closed_pipe_ends_a_listing_quietly_instead_of_panicking() {
+    use std::io::Read;
+    use std::process::Stdio;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let recordings = tmp.path().join("recordings");
+    // Far more output than any pipe buffer holds, so the writer is certain to hit the closed pipe.
+    for i in 0..4000 {
+        std::fs::create_dir_all(recordings.join(format!("2020-01-01-0900-rec{i}"))).unwrap();
+    }
+    let config = tmp.path().join("config.toml");
+    std::fs::write(
+        &config,
+        format!("output_dir = '{}'\n", recordings.display()),
+    )
+    .unwrap();
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_nastro"))
+        .env_remove("NASTRO_CONFIG")
+        .arg("--config")
+        .arg(&config)
+        .args(["records", "--plain"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn nastro");
+
+    let mut stdout = child.stdout.take().unwrap();
+    let mut first = [0u8; 64];
+    stdout.read_exact(&mut first).expect("some output");
+    drop(stdout); // the reader goes away, like `| head`
+
+    let status = child.wait().expect("wait");
+    let mut stderr = String::new();
+    child
+        .stderr
+        .take()
+        .unwrap()
+        .read_to_string(&mut stderr)
+        .unwrap();
+
+    assert!(
+        !stderr.contains("panicked"),
+        "panicked on a closed pipe:\n{stderr}"
+    );
+    assert!(status.success(), "exit status {status:?}\n{stderr}");
+}

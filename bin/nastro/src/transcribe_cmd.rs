@@ -107,7 +107,7 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
         {
             options.overwrite = true;
         } else {
-            println!("Nothing changed.");
+            outln!("Nothing changed.");
             return Ok(());
         }
     }
@@ -146,9 +146,9 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
     match result {
         Ok(out) => {
             if out.segments == 0 {
-                println!("No speech was detected; wrote an empty transcript.");
+                outln!("No speech was detected; wrote an empty transcript.");
             } else {
-                println!(
+                outln!(
                     "Transcribed {} of audio in {} (language: {}, {} segments).",
                     nastro_records::format_duration(out.audio_seconds),
                     format_elapsed(out.elapsed),
@@ -156,14 +156,14 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
                     out.segments
                 );
             }
-            println!(
+            outln!(
                 "  {}",
                 record
                     .path
                     .join(nastro_transcribe::output::TXT_FILE)
                     .display()
             );
-            println!(
+            outln!(
                 "  {}",
                 record
                     .path
@@ -181,7 +181,7 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
 }
 
 fn print_models(selected: &str) {
-    println!("{:<22} {:>10}  INSTALLED", "MODEL", "SIZE");
+    outln!("{:<22} {:>10}  INSTALLED", "MODEL", "SIZE");
     for m in nastro_transcribe::MODELS {
         let installed = if models::is_installed(m.name) {
             "yes"
@@ -193,7 +193,7 @@ fn print_models(selected: &str) {
         } else {
             ""
         };
-        println!(
+        outln!(
             "{:<22} {:>10}  {}{}",
             m.name,
             nastro_records::format_size(m.size),
@@ -201,9 +201,9 @@ fn print_models(selected: &str) {
             mark
         );
     }
-    println!();
-    println!("Models are stored in {}", models::model_dir().display());
-    println!("Set the default with `whisper_model = \"...\"` in the config file. `.en` models are English-only and faster.");
+    outln!();
+    outln!("Models are stored in {}", models::model_dir().display());
+    outln!("Set the default with `whisper_model = \"...\"` in the config file. `.en` models are English-only and faster.");
 }
 
 /// Asks a yes/no question. Never blocks a script: without a terminal the answer is "no" unless `assume_yes`.

@@ -1,3 +1,5 @@
+#[macro_use]
+mod out;
 mod transcribe_cmd;
 
 use clap::{Parser, Subcommand};
@@ -174,13 +176,13 @@ fn run_records(config: &Config, plain: bool) -> anyhow::Result<()> {
 
     if plain {
         for record in &records {
-            println!("{}", nastro_records::plain_line(record));
+            outln!("{}", nastro_records::plain_line(record));
         }
         return Ok(());
     }
 
     if records.is_empty() {
-        println!("No recordings yet in {}.", config.output_dir.display());
+        outln!("No recordings yet in {}.", config.output_dir.display());
         return Ok(());
     }
 
@@ -190,7 +192,7 @@ fn run_records(config: &Config, plain: bool) -> anyhow::Result<()> {
             .map(nastro_records::format_duration)
             .unwrap_or_else(|| "-".to_string());
         let transcript = if record.has_transcript { "✓" } else { " " };
-        println!(
+        outln!(
             "{:<32} {:>10} {:>10}  {}",
             record.dir_name,
             duration,
