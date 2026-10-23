@@ -1,3 +1,5 @@
+mod transcribe_cmd;
+
 use clap::{Parser, Subcommand};
 use nastro_config::Config;
 use nastro_record::{CaptureMode, Outcome, RecordingSession, SessionError};
@@ -34,8 +36,8 @@ enum Command {
         #[arg(long)]
         plain: bool,
     },
-    /// Transcribe a recording by id, or "last".
-    Transcribe { id: String },
+    /// Transcribe a recording (speech to text, on this computer).
+    Transcribe(transcribe_cmd::Args),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -64,10 +66,7 @@ fn main() -> anyhow::Result<()> {
         }
         Some(Command::Records { plain: true }) => run_records(&config, true),
         Some(Command::Records { plain: false }) => run_tui_or_list(&config),
-        Some(Command::Transcribe { id }) => {
-            println!("nastro transcribe {id}: not yet implemented in the Rust port.");
-            Ok(())
-        }
+        Some(Command::Transcribe(args)) => transcribe_cmd::run(&config, args),
     }
 }
 

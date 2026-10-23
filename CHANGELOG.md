@@ -6,6 +6,47 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (Phase 7 - transcription)
+
+- **`nastro transcribe <id|last>`** and the TUI's **`t`** key: on-device speech-to-text, written as `transcript.txt`
+  (one phrase per line) and `transcript.srt` next to `audio.m4a`. New crate `nastro-transcribe`: `ffmpeg` decodes the
+  recording to 16 kHz mono, an embedded **whisper.cpp** (via `whisper-rs`, statically linked) recognises it.
+  Language is configurable or auto-detected. Works offline after the model download.
+- **Models** (`whisper_model`, default `large-v3-turbo`; `nastro transcribe --list-models`): downloaded on first use from
+  a revision of `ggerganov/whisper.cpp` pinned in the source, over HTTPS, and verified against a built-in SHA-256 and
+  size *before* the file appears under its final name; a bad download is discarded and never replaces a good model.
+  nastro asks before downloading (`--yes` to skip). `whisper_model` may also be the path of a ggml `.bin`.
+- **TUI**: transcription runs in the background with live progress in the list and detail views, a queue honouring
+  `max_parallel_transcriptions`, cancel (`c`), and confirmations before replacing a transcript, downloading a model, or
+  quitting while a job runs. The footer hints adapt to the terminal width so help and quit are never cut off.
+- **Safe by construction**: a transcript is replaced only once the new one is complete (a cancelled or failed run leaves
+  the old one untouched); both files are private (`0600` on Unix); a recording still being recorded is refused; silence
+  produces an empty transcript, not invented words; cancelling takes effect within a fraction of a second.
+- `.cargo/config.toml` pins whisper.cpp to a portable x86-64 baseline (AVX2/FMA/F16C) instead of the build machine's CPU,
+  and `nastro` checks for those at run time and says so rather than crashing.
+- CI builds whisper.cpp on Windows and Linux (`eng/ci-native-deps.ps1`) and runs the real transcription tests - library,
+  CLI and a real TUI session in a pseudo-terminal - against a downloaded `tiny.en` model; `NASTRO_REQUIRE_WHISPER=1`
+  turns a skip into a failure. Public-domain speech fixture: `crates/nastro-transcribe/tests/fixtures/jfk.wav`.
+- Licensing: whisper.cpp/ggml attribution added to `NOTICE.md`; `CDLA-Permissive-2.0` (the CA-list data in
+  `webpki-roots`, used for the model download's TLS) added to the `cargo-deny` and `cargo-about` allow-lists.
+
+### Changed
+
+- The `transcriber` config value is now `whisper` (the built-in engine). `whisper-cli` is accepted as an alias.
+  `whisperx` (speaker labels) is reported as unavailable instead of silently ignored.
+- `nastro` is now about 4.7 MB (was under 1 MB) because it contains the speech engine.
+- Building from source needs CMake, a C++ compiler and libclang (see the README).
+
+### Fixed (found while building the above)
+
+- whisper-rs 0.16's `set_abort_callback_safe` registers a trampoline for the closure's concrete type but passes it a
+  pointer to a boxed trait object, which is undefined behaviour for any closure that captures state (we saw a
+  spurious abort, error -6). nastro uses the raw callback API with correct types instead.
+- With MSVC and the default Visual Studio generator, the `cmake` crate replaces CMake's Release flags and drops `/O2`,
+  so whisper.cpp was compiled without optimisation (about 10x slower, and slow to cancel). Fixed in `.cargo/config.toml`.
+- Thread count: whisper.cpp threads spin-wait, so using every hardware thread makes recognition collapse (measured: 8
+  threads on a 6-CPU machine took 13 minutes where 4 took 20 seconds). The default is now one per physical core (at most
+  16) and any request is capped to that.
 ### Added (GitHub releases, issues and pull requests)
 
 - The release pipeline now ends with a **Publish to GitHub** stage: a draft release is created, every asset is

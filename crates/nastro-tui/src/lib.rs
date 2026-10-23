@@ -6,6 +6,7 @@
 
 pub mod actions;
 pub mod app;
+pub mod jobs;
 pub mod view;
 
 use std::io;
@@ -19,6 +20,7 @@ use ratatui::crossterm::event::{self, Event, KeyEventKind};
 use ratatui::DefaultTerminal;
 
 use app::{App, Effect};
+use jobs::{JobMsg, Jobs};
 
 /// How often the loop wakes to refresh the recording timer / meters even with no
 /// input.
@@ -61,6 +63,8 @@ fn event_loop(
     terminate: &AtomicBool,
 ) -> io::Result<()> {
     let mut session: Option<RecordingSession> = None;
+    // Dropped (cancelling and joining any transcription) on every way out of this function.
+    let mut jobs = Jobs::new(config.resolved_max_parallel() as usize);
 
     loop {
         terminal.draw(|frame| view::draw(frame, &app))?;
@@ -78,12 +82,17 @@ fn event_loop(
             if let Event::Key(key) = event::read()? {
                 if key.kind != KeyEventKind::Release {
                     for effect in app.handle_key(key) {
-                        if perform(effect, terminal, config, &mut app, &mut session)? {
+                        if perform(effect, terminal, config, &mut app, &mut session, &mut jobs)? {
                             return Ok(());
                         }
                     }
                 }
             }
+        }
+
+        // Background transcriptions: progress, completion, and queued jobs taking over freed slots.
+        for msg in jobs.poll() {
+            handle_job_msg(msg, config, &mut app)?;
         }
 
         // Tick: feed the live session into the UI, and notice if the capture
@@ -106,6 +115,7 @@ fn perform(
     config: &Config,
     app: &mut App,
     session: &mut Option<RecordingSession>,
+    jobs: &mut Jobs,
 ) -> io::Result<bool> {
     match effect {
         Effect::Quit => {
@@ -149,6 +159,108 @@ fn perform(
             }
         }
         Effect::LoadPreview { path } => app.on_preview(actions::read_transcript(&path)),
+        Effect::StartTranscription {
+            path,
+            dir_name,
+            overwrite,
+            download_ok,
+        } => start_transcription(config, app, jobs, path, dir_name, overwrite, download_ok),
+        Effect::CancelTranscription { dir_name } => {
+            // A queued job disappears at once; a running one reports its cancellation through `jobs.poll()`.
+            if jobs.cancel(&dir_name) {
+                app.on_transcribe_cancelled(&dir_name);
+            }
+        }
     }
     Ok(false)
+}
+
+/// Checks everything that can be checked up front, so mistakes show immediately instead of after a queue wait or a
+/// download, then hands the job to the background runner.
+fn start_transcription(
+    config: &Config,
+    app: &mut App,
+    jobs: &mut Jobs,
+    path: std::path::PathBuf,
+    dir_name: String,
+    overwrite: bool,
+    download_ok: bool,
+) {
+    use nastro_transcribe::{engine, models};
+
+    if let Err(e) = nastro_transcribe::check_transcriber(&config.transcriber) {
+        return app.on_action_error(&e.to_string());
+    }
+
+    let newest = app.records.iter().map(|r| r.dir_name.as_str()).max();
+    if nastro_transcribe::recording_in_progress(
+        &config.output_dir,
+        newest,
+        &dir_name,
+        &nastro_record::is_process_alive,
+    ) {
+        return app.on_action_error(&nastro_transcribe::Error::InProgress.to_string());
+    }
+
+    let mut options = nastro_transcribe::Options::from_config(config);
+    options.overwrite = overwrite;
+    if let Err(e) = engine::resolve_language(&options.model, &options.lang) {
+        return app.on_action_error(&e.to_string());
+    }
+
+    if !models::is_path(&options.model) && !models::is_installed(&options.model) {
+        let Some(info) = models::find(&options.model) else {
+            return app.on_action_error(
+                &nastro_transcribe::Error::UnknownModel(options.model).to_string(),
+            );
+        };
+        if !download_ok {
+            return app.on_model_download_needed(
+                &dir_name,
+                info.name,
+                &nastro_records::format_size(info.size),
+                overwrite,
+            );
+        }
+    }
+
+    let state = jobs.submit(dir_name.clone(), path, options);
+    app.on_transcribe_state(&dir_name, state);
+}
+
+/// Applies one report from a background job to the UI.
+fn handle_job_msg(msg: JobMsg, config: &Config, app: &mut App) -> io::Result<()> {
+    match msg {
+        JobMsg::State { dir_name, state } => {
+            // A late progress tick must not resurrect a job that has already finished or been cancelled.
+            if app.jobs.contains_key(&dir_name) {
+                app.on_transcribe_state(&dir_name, state);
+            }
+        }
+        JobMsg::Done { dir_name, result } => match result {
+            Ok(out) => {
+                let summary = if out.segments == 0 {
+                    "no speech detected".to_string()
+                } else {
+                    format!(
+                        "{} of audio in {}s",
+                        nastro_records::format_duration(out.audio_seconds),
+                        out.elapsed.as_secs().max(1)
+                    )
+                };
+                app.on_transcribe_finished(&dir_name, &summary);
+                app.on_records(scan(config)?);
+                // If that recording is open, show its new transcript.
+                if app.screen == app::Screen::Detail {
+                    if let Some(r) = app.selected_record().filter(|r| r.dir_name == dir_name) {
+                        let path = r.path.clone();
+                        app.on_preview(actions::read_transcript(&path));
+                    }
+                }
+            }
+            Err(nastro_transcribe::Error::Cancelled) => app.on_transcribe_cancelled(&dir_name),
+            Err(e) => app.on_transcribe_failed(&dir_name, &e.to_string()),
+        },
+    }
+    Ok(())
 }

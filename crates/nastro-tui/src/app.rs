@@ -7,6 +7,7 @@
 //! recording / detail / help screens, `y`-to-confirm destructive actions, and
 //! stop-and-save on `s` / `q` / Ctrl+C while recording.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -25,8 +26,60 @@ pub enum Screen {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Modal {
-    ConfirmDelete { dir_name: String },
+    ConfirmDelete {
+        dir_name: String,
+    },
     ConfirmDiscard,
+    /// `transcript.txt` already exists.
+    ConfirmOverwriteTranscript {
+        dir_name: String,
+    },
+    /// The speech model is not on disk, and fetching it is a (possibly very large) download.
+    ConfirmDownloadModel {
+        dir_name: String,
+        model: String,
+        size_text: String,
+        overwrite: bool,
+    },
+    /// Quitting would cancel transcriptions that are still running.
+    ConfirmQuitWithJobs,
+}
+
+/// Where a background transcription is up to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobState {
+    /// Waiting for a free slot (`max_parallel_transcriptions`).
+    Queued,
+    /// Downloading the model, 0..=100.
+    Downloading(u8),
+    Reading,
+    /// Recognising speech, 0..=100.
+    Transcribing(u8),
+    Saving,
+}
+
+impl JobState {
+    /// A few characters, for the list's status column.
+    pub fn short(self) -> String {
+        match self {
+            JobState::Queued => "queued".into(),
+            JobState::Downloading(p) => format!("dl {p}%"),
+            JobState::Reading => "read".into(),
+            JobState::Transcribing(p) => format!("{p}%"),
+            JobState::Saving => "save".into(),
+        }
+    }
+
+    /// A phrase, for the detail view.
+    pub fn describe(self) -> String {
+        match self {
+            JobState::Queued => "queued, waiting for a free slot".into(),
+            JobState::Downloading(p) => format!("downloading the speech model ({p}%)"),
+            JobState::Reading => "reading the audio".into(),
+            JobState::Transcribing(p) => format!("transcribing ({p}%)"),
+            JobState::Saving => "saving".into(),
+        }
+    }
 }
 
 /// Side effects the event loop must perform on the app's behalf.
@@ -48,6 +101,17 @@ pub enum Effect {
     },
     LoadPreview {
         path: PathBuf,
+    },
+    /// Start (or queue) a background transcription. `download_ok` means the user already agreed to download a
+    /// missing model; without it the event loop asks first.
+    StartTranscription {
+        path: PathBuf,
+        dir_name: String,
+        overwrite: bool,
+        download_ok: bool,
+    },
+    CancelTranscription {
+        dir_name: String,
     },
     Quit,
 }
@@ -88,6 +152,8 @@ pub struct App {
     pub status: Option<Status>,
     pub preview: Option<String>,
     pub output_dir: PathBuf,
+    /// Transcriptions queued or running, by recording directory name.
+    pub jobs: HashMap<String, JobState>,
 }
 
 /// Cycle order for the capture-mode picker.
@@ -125,6 +191,7 @@ impl App {
             status: None,
             preview: None,
             output_dir,
+            jobs: HashMap::new(),
         }
     }
 
@@ -213,6 +280,31 @@ impl App {
                 Some(path) => vec![Effect::DeleteRecord { path, dir_name }],
                 None => Vec::new(),
             },
+            Modal::ConfirmOverwriteTranscript { dir_name } => {
+                match self.record_by_name(&dir_name) {
+                    Some(path) => vec![Effect::StartTranscription {
+                        path,
+                        dir_name,
+                        overwrite: true,
+                        download_ok: false,
+                    }],
+                    None => Vec::new(),
+                }
+            }
+            Modal::ConfirmDownloadModel {
+                dir_name,
+                overwrite,
+                ..
+            } => match self.record_by_name(&dir_name) {
+                Some(path) => vec![Effect::StartTranscription {
+                    path,
+                    dir_name,
+                    overwrite,
+                    download_ok: true,
+                }],
+                None => Vec::new(),
+            },
+            Modal::ConfirmQuitWithJobs => vec![Effect::Quit],
         }
     }
 
@@ -246,13 +338,13 @@ impl App {
 
         let len = self.visible().len();
         match key.code {
-            KeyCode::Char('q') => return vec![Effect::Quit],
+            KeyCode::Char('q') => return self.quit_or_confirm(),
             KeyCode::Esc => {
                 if !self.filter.is_empty() {
                     self.filter.clear();
                     self.clamp_selection();
                 } else {
-                    return vec![Effect::Quit];
+                    return self.quit_or_confirm();
                 }
             }
             KeyCode::Down | KeyCode::Char('j') => {
@@ -282,10 +374,21 @@ impl App {
             }
             KeyCode::Char('o') => return self.reveal_selected(),
             KeyCode::Char('d') => self.ask_delete_selected(),
-            KeyCode::Char('t') => self.not_implemented_transcribe(),
+            KeyCode::Char('t') => return self.transcribe_selected(),
+            KeyCode::Char('c') => return self.cancel_selected_job(),
             _ => {}
         }
         Vec::new()
+    }
+
+    /// Quits at once, unless transcriptions are running: those are cancelled by quitting, so ask first.
+    fn quit_or_confirm(&mut self) -> Vec<Effect> {
+        if self.jobs.is_empty() {
+            vec![Effect::Quit]
+        } else {
+            self.modal = Some(Modal::ConfirmQuitWithJobs);
+            Vec::new()
+        }
     }
 
     fn reveal_selected(&mut self) -> Vec<Effect> {
@@ -298,18 +401,58 @@ impl App {
     }
 
     fn ask_delete_selected(&mut self) {
-        if let Some(r) = self.selected_record() {
-            self.modal = Some(Modal::ConfirmDelete {
-                dir_name: r.dir_name.clone(),
-            });
+        let Some(r) = self.selected_record() else {
+            return;
+        };
+        let dir_name = r.dir_name.clone();
+        if self.jobs.contains_key(&dir_name) {
+            // Deleting the folder under a running transcription would only make it fail confusingly.
+            self.set_status(
+                "This recording is being transcribed: cancel that first (c).",
+                true,
+            );
+            return;
         }
+        self.modal = Some(Modal::ConfirmDelete { dir_name });
     }
 
-    fn not_implemented_transcribe(&mut self) {
-        self.set_status(
-            "Transcription isn't implemented yet in this port (planned: Phase 7).",
-            false,
-        );
+    /// `t`: transcribe the selected recording in the background.
+    fn transcribe_selected(&mut self) -> Vec<Effect> {
+        let Some(r) = self.selected_record() else {
+            return Vec::new();
+        };
+        let (path, dir_name, has_transcript) =
+            (r.path.clone(), r.dir_name.clone(), r.has_transcript);
+        if self.jobs.contains_key(&dir_name) {
+            self.set_status(
+                format!("Already transcribing {dir_name} (c cancels it)."),
+                false,
+            );
+            return Vec::new();
+        }
+        if has_transcript {
+            self.modal = Some(Modal::ConfirmOverwriteTranscript { dir_name });
+            return Vec::new();
+        }
+        vec![Effect::StartTranscription {
+            path,
+            dir_name,
+            overwrite: false,
+            download_ok: false,
+        }]
+    }
+
+    /// `c`: cancel the selected recording's transcription, if it has one.
+    fn cancel_selected_job(&mut self) -> Vec<Effect> {
+        let Some(r) = self.selected_record() else {
+            return Vec::new();
+        };
+        let dir_name = r.dir_name.clone();
+        if self.jobs.contains_key(&dir_name) {
+            vec![Effect::CancelTranscription { dir_name }]
+        } else {
+            Vec::new()
+        }
     }
 
     fn handle_form_key(&mut self, key: KeyEvent) -> Vec<Effect> {
@@ -355,7 +498,8 @@ impl App {
             }
             KeyCode::Char('o') => return self.reveal_selected(),
             KeyCode::Char('d') => self.ask_delete_selected(),
-            KeyCode::Char('t') => self.not_implemented_transcribe(),
+            KeyCode::Char('t') => return self.transcribe_selected(),
+            KeyCode::Char('c') => return self.cancel_selected_job(),
             KeyCode::Char('?') => self.open_help(),
             _ => {}
         }
@@ -440,6 +584,47 @@ impl App {
 
     pub fn show_busy(&mut self, message: &str) {
         self.set_status(message.to_string(), false);
+    }
+
+    // ---------------------------------------------------- transcription jobs
+
+    /// A job was queued or advanced.
+    pub fn on_transcribe_state(&mut self, dir_name: &str, state: JobState) {
+        self.jobs.insert(dir_name.to_string(), state);
+    }
+
+    pub fn on_transcribe_finished(&mut self, dir_name: &str, summary: &str) {
+        self.jobs.remove(dir_name);
+        self.set_status(format!("Transcribed {dir_name}: {summary}"), false);
+    }
+
+    pub fn on_transcribe_failed(&mut self, dir_name: &str, message: &str) {
+        self.jobs.remove(dir_name);
+        self.set_status(
+            format!("Transcription of {dir_name} failed: {message}"),
+            true,
+        );
+    }
+
+    pub fn on_transcribe_cancelled(&mut self, dir_name: &str) {
+        self.jobs.remove(dir_name);
+        self.set_status(format!("Cancelled transcription of {dir_name}."), false);
+    }
+
+    /// The speech model must be downloaded first: ask before fetching it.
+    pub fn on_model_download_needed(
+        &mut self,
+        dir_name: &str,
+        model: &str,
+        size_text: &str,
+        overwrite: bool,
+    ) {
+        self.modal = Some(Modal::ConfirmDownloadModel {
+            dir_name: dir_name.to_string(),
+            model: model.to_string(),
+            size_text: size_text.to_string(),
+            overwrite,
+        });
     }
 }
 
@@ -894,17 +1079,199 @@ mod tests {
         assert_eq!(a.screen, Screen::Detail);
     }
 
+    // ----- transcription
+
+    fn start(path: &str, name: &str, overwrite: bool, download_ok: bool) -> Effect {
+        Effect::StartTranscription {
+            path: PathBuf::from(path),
+            dir_name: name.to_string(),
+            overwrite,
+            download_ok,
+        }
+    }
+
     #[test]
-    fn transcribe_reports_not_implemented_instead_of_silently_doing_nothing() {
+    fn t_on_an_untranscribed_recording_starts_a_job() {
         let mut a = app();
+        a.handle_key(ch('j')); // 2026-10-21-1000-planning, no transcript
+        assert_eq!(
+            a.handle_key(ch('t')),
+            vec![start(
+                "/rec/2026-10-21-1000-planning",
+                "2026-10-21-1000-planning",
+                false,
+                false
+            )]
+        );
+    }
+
+    #[test]
+    fn t_on_a_transcribed_recording_asks_before_overwriting() {
+        let mut a = app(); // first record has a transcript
         assert!(a.handle_key(ch('t')).is_empty());
-        assert!(a.status.as_ref().unwrap().text.contains("Phase 7"));
+        assert_eq!(
+            a.modal,
+            Some(Modal::ConfirmOverwriteTranscript {
+                dir_name: "2026-10-22-1430-standup".into()
+            })
+        );
+        // only an explicit y goes ahead, and it carries overwrite = true
+        assert_eq!(
+            a.handle_key(ch('y')),
+            vec![start(
+                "/rec/2026-10-22-1430-standup",
+                "2026-10-22-1430-standup",
+                true,
+                false
+            )]
+        );
+    }
+
+    #[test]
+    fn declining_the_overwrite_does_nothing() {
+        let mut a = app();
+        a.handle_key(ch('t'));
+        assert!(a.handle_key(key(KeyCode::Enter)).is_empty());
+        assert!(a.modal.is_none());
+    }
+
+    #[test]
+    fn t_works_from_the_detail_screen_too() {
+        let mut a = app();
+        a.handle_key(ch('j'));
+        a.handle_key(key(KeyCode::Enter));
+        assert_eq!(a.screen, Screen::Detail);
+        assert_eq!(a.handle_key(ch('t')).len(), 1);
+    }
+
+    #[test]
+    fn t_on_an_empty_list_does_nothing() {
+        let mut a = App::new(vec![], PathBuf::from("/rec"));
+        assert!(a.handle_key(ch('t')).is_empty());
+        assert!(a.handle_key(ch('c')).is_empty());
+    }
+
+    #[test]
+    fn t_while_already_transcribing_does_not_start_a_second_job() {
+        let mut a = app();
+        a.handle_key(ch('j'));
+        a.on_transcribe_state("2026-10-21-1000-planning", JobState::Transcribing(10));
+        assert!(a.handle_key(ch('t')).is_empty());
+        assert!(a
+            .status
+            .as_ref()
+            .unwrap()
+            .text
+            .contains("Already transcribing"));
+    }
+
+    #[test]
+    fn the_model_download_is_confirmed_and_then_proceeds_with_download_ok() {
+        let mut a = app();
+        a.handle_key(ch('j'));
+        a.on_model_download_needed(
+            "2026-10-21-1000-planning",
+            "large-v3-turbo",
+            "1.5 GiB",
+            false,
+        );
+        assert!(matches!(a.modal, Some(Modal::ConfirmDownloadModel { .. })));
+        assert_eq!(
+            a.handle_key(ch('y')),
+            vec![start(
+                "/rec/2026-10-21-1000-planning",
+                "2026-10-21-1000-planning",
+                false,
+                true
+            )]
+        );
+    }
+
+    #[test]
+    fn declining_the_download_starts_nothing() {
+        let mut a = app();
+        a.on_model_download_needed("2026-10-22-1430-standup", "m", "1 GiB", true);
+        assert!(a.handle_key(ch('n')).is_empty());
+        assert!(a.modal.is_none());
+    }
+
+    #[test]
+    fn c_cancels_only_the_selected_recordings_job() {
+        let mut a = app();
+        a.on_transcribe_state("2026-10-21-1000-planning", JobState::Queued);
+        assert!(
+            a.handle_key(ch('c')).is_empty(),
+            "selected record has no job"
+        );
+        a.handle_key(ch('j'));
+        assert_eq!(
+            a.handle_key(ch('c')),
+            vec![Effect::CancelTranscription {
+                dir_name: "2026-10-21-1000-planning".into()
+            }]
+        );
+    }
+
+    #[test]
+    fn a_recording_being_transcribed_cannot_be_deleted() {
+        let mut a = app();
+        a.on_transcribe_state("2026-10-22-1430-standup", JobState::Reading);
+        a.handle_key(ch('d'));
+        assert!(a.modal.is_none());
+        assert!(a.status.as_ref().unwrap().is_error);
+    }
+
+    #[test]
+    fn quitting_with_a_running_job_asks_first() {
+        let mut a = app();
+        a.on_transcribe_state("2026-10-22-1430-standup", JobState::Transcribing(3));
+        assert!(a.handle_key(ch('q')).is_empty());
+        assert_eq!(a.modal, Some(Modal::ConfirmQuitWithJobs));
+        assert_eq!(a.handle_key(ch('y')), vec![Effect::Quit]);
+
+        // ...but a different key keeps going, and with nothing running q quits straight away.
+        let mut a = app();
+        a.on_transcribe_state("2026-10-22-1430-standup", JobState::Queued);
+        a.handle_key(ch('q'));
+        assert!(a.handle_key(ch('n')).is_empty());
+        let mut a = app();
+        assert_eq!(a.handle_key(ch('q')), vec![Effect::Quit]);
+    }
+
+    #[test]
+    fn job_events_update_and_clear_state_with_the_right_status() {
+        let mut a = app();
+        a.on_transcribe_state("x", JobState::Transcribing(40));
+        assert_eq!(a.jobs.get("x"), Some(&JobState::Transcribing(40)));
+
+        a.on_transcribe_finished("x", "ok");
+        assert!(a.jobs.is_empty());
+        assert!(!a.status.as_ref().unwrap().is_error);
+
+        a.on_transcribe_state("y", JobState::Saving);
+        a.on_transcribe_failed("y", "boom");
+        assert!(a.jobs.is_empty());
+        let s = a.status.as_ref().unwrap();
+        assert!(s.is_error && s.text.contains("boom"));
+
+        a.on_transcribe_state("z", JobState::Queued);
+        a.on_transcribe_cancelled("z");
+        assert!(a.jobs.is_empty());
+        assert!(a.status.as_ref().unwrap().text.contains("Cancelled"));
+    }
+
+    #[test]
+    fn job_state_labels() {
+        assert_eq!(JobState::Transcribing(37).short(), "37%");
+        assert_eq!(JobState::Downloading(5).short(), "dl 5%");
+        assert!(JobState::Queued.describe().contains("queued"));
+        assert!(JobState::Transcribing(37).describe().contains("37%"));
     }
 
     #[test]
     fn status_clears_on_the_next_key() {
         let mut a = app();
-        a.handle_key(ch('t'));
+        a.on_action_error("something happened");
         assert!(a.status.is_some());
         a.handle_key(ch('j'));
         assert!(a.status.is_none());

@@ -104,6 +104,8 @@ allow = [
     "Unlicense",
     "0BSD",
     "CC0-1.0",
+    # Data license of `webpki-roots` (the bundled Mozilla CA list used by the TLS stack that downloads whisper models).
+    "CDLA-Permissive-2.0",
 ]
 # The confidence threshold for detecting a license from license text.
 # The higher the value, the more closely the license text must be to the

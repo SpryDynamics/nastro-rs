@@ -17,7 +17,7 @@ pub const PRIVATE_FILE_MODE: u32 = 0o600;
 
 pub const DEFAULT_WHISPER_MODEL: &str = "large-v3-turbo";
 pub const DEFAULT_LANG: &str = "auto";
-pub const DEFAULT_TRANSCRIBER: &str = "whisper-cli";
+pub const DEFAULT_TRANSCRIBER: &str = "whisper";
 pub const DEFAULT_MAX_PARALLEL_TRANSCRIPTIONS: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

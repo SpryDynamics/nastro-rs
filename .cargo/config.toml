@@ -1,0 +1,26 @@
+# Native-code build settings for whisper.cpp (vendored by whisper-rs-sys).
+#
+# ggml may otherwise be compiled for the *build machine's* CPU (-march=native), which would make the
+# release binaries crash with "illegal instruction" on older CPUs. Pin a portable baseline instead:
+# x86-64 with AVX2 + FMA + F16C (Intel Haswell / AMD Excavator, 2013-2015, and newer). nastro checks for
+# these at run time and explains, rather than crashing. `force = false`: an explicit environment
+# variable still wins, e.g. GGML_NATIVE=ON for a build that only ever runs on the machine that built it.
+[env]
+GGML_NATIVE = { value = "OFF", force = false }
+GGML_SSE42 = { value = "ON", force = false }
+GGML_AVX = { value = "ON", force = false }
+GGML_AVX2 = { value = "ON", force = false }
+GGML_FMA = { value = "ON", force = false }
+GGML_F16C = { value = "ON", force = false }
+GGML_BMI2 = { value = "OFF", force = false }
+
+# Optimisation flags for whisper.cpp. With MSVC and the default Visual Studio generator, the `cmake` crate
+# *replaces* CMake's own Release flags (which carry /O2) with its stripped-down ones, so ggml was being compiled
+# with NO optimisation: roughly 10x slower, and it made cancelling sluggish. Restore them. `-O2 -DNDEBUG` is
+# understood by both cl.exe and gcc/clang, which matters because `[env]` cannot be scoped to one platform.
+CMAKE_C_FLAGS_RELEASE = { value = "-O2 -DNDEBUG", force = false }
+CMAKE_CXX_FLAGS_RELEASE = { value = "-O2 -DNDEBUG", force = false }
+# `cargo test`/`cargo build` without --release use CMake's RelWithDebInfo for whisper.cpp (it is unusably slow
+# unoptimised), which the `cmake` crate strips in exactly the same way.
+CMAKE_C_FLAGS_RELWITHDEBINFO = { value = "-O2 -DNDEBUG", force = false }
+CMAKE_CXX_FLAGS_RELWITHDEBINFO = { value = "-O2 -DNDEBUG", force = false }

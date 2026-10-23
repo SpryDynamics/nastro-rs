@@ -11,6 +11,8 @@ accepted = [
     "Unlicense",
     "0BSD",
     "CC0-1.0",
+    # Data license of `webpki-roots` (the bundled Mozilla CA list used by the TLS stack that downloads whisper models).
+    "CDLA-Permissive-2.0",
 ]
 
 ignore-build-dependencies = true

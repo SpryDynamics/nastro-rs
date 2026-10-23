@@ -75,6 +75,19 @@ az role assignment create --assignee-object-id <spObjectId> --assignee-principal
 az ad app federated-credential create --id <appObjectId> --parameters cred.json
 ```
 
+## Native build dependencies
+
+`nastro` contains the speech engine (whisper.cpp), which Cargo compiles from source, so the Build jobs need **CMake**,
+a C/C++ compiler and **libclang**. `eng/ci-native-deps.ps1` provides them on both the Windows and Linux agents (it uses
+what the image has and installs only what is missing, and points `LIBCLANG_PATH` at libclang on Windows). If a release
+build fails in `whisper-rs-sys`, that step is the first place to look.
+
+`.cargo/config.toml` pins the whisper.cpp build to a portable x86-64 baseline (AVX2/FMA/F16C) rather than the agent's own
+CPU: without that, a binary built on a newer machine could crash with "illegal instruction" on an older one. The shipped
+`REQUIREMENTS.txt` states the AVX2 requirement, and `nastro` checks for it at run time. The release build also smoke-tests
+`nastro transcribe --list-models` on the packaged binary on both platforms, so a binary that does not start with the speech
+engine linked in fails the pipeline. (It does not run a transcription: that needs a 75 MB+ model, and the CI pipeline
+already does it on every commit.)
 ## GitHub mirror
 
 `https://github.com/SpryDynamics/nastro-rs` is a **read-only, one-way mirror**; Azure

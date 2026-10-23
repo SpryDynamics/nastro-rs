@@ -85,7 +85,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         Screen::Help => draw_help(frame, body),
     }
 
-    frame.render_widget(Paragraph::new(footer_line(app)), footer);
+    frame.render_widget(Paragraph::new(footer_line(app, footer.width)), footer);
 
     if let Some(modal) = &app.modal {
         draw_modal(frame, modal, body);
@@ -116,6 +116,26 @@ fn title_line(app: &App) -> Line<'static> {
     Line::from(spans)
 }
 
+/// Like [`hint`], but on a narrow terminal drops the hints whose keys are in `droppable` (in that order) until the
+/// bar fits, so the ones that matter most (help, quit) are never the ones cut off at the edge.
+fn hint_fit(pairs: &[(&str, &str)], droppable: &[&str], width: u16) -> Line<'static> {
+    let needed = |p: &[(&str, &str)]| -> usize {
+        1 + p
+            .iter()
+            .map(|(k, w)| k.chars().count() + 1 + w.chars().count())
+            .sum::<usize>()
+            + 5 * p.len().saturating_sub(1)
+    };
+    let mut pairs = pairs.to_vec();
+    for key in droppable {
+        if needed(&pairs) <= usize::from(width) {
+            break;
+        }
+        pairs.retain(|(k, _)| k != key);
+    }
+    hint(&pairs)
+}
+
 fn hint(pairs: &[(&str, &str)]) -> Line<'static> {
     let mut spans = Vec::new();
     for (i, (key, what)) in pairs.iter().enumerate() {
@@ -128,7 +148,7 @@ fn hint(pairs: &[(&str, &str)]) -> Line<'static> {
     Line::from(spans)
 }
 
-fn footer_line(app: &App) -> Line<'static> {
+fn footer_line(app: &App, width: u16) -> Line<'static> {
     if let Some(status) = &app.status {
         let style = if status.is_error {
             Style::new().fg(Color::Red)
@@ -148,23 +168,33 @@ fn footer_line(app: &App) -> Line<'static> {
         ]);
     }
     match app.screen {
-        Screen::List => hint(&[
-            ("r", "record"),
-            ("enter", "open"),
-            ("/", "filter"),
-            ("o", "reveal"),
-            ("d", "delete"),
-            ("?", "help"),
-            ("q", "quit"),
-        ]),
+        Screen::List => hint_fit(
+            &[
+                ("r", "record"),
+                ("enter", "open"),
+                ("/", "filter"),
+                ("t", "transcribe"),
+                ("o", "reveal"),
+                ("d", "delete"),
+                ("?", "help"),
+                ("q", "quit"),
+            ],
+            &["o", "d", "/", "enter", "r", "t"],
+            width,
+        ),
         Screen::NameForm => hint(&[("enter", "start"), ("tab", "mode"), ("esc", "cancel")]),
         Screen::Recording => hint(&[("s", "stop & save"), ("x", "discard")]),
-        Screen::Detail => hint(&[
-            ("esc", "back"),
-            ("o", "reveal"),
-            ("d", "delete"),
-            ("?", "help"),
-        ]),
+        Screen::Detail => hint_fit(
+            &[
+                ("esc", "back"),
+                ("t", "transcribe"),
+                ("o", "reveal"),
+                ("d", "delete"),
+                ("?", "help"),
+            ],
+            &["o", "d", "esc", "t"],
+            width,
+        ),
         Screen::Help => hint(&[("any key", "close")]),
     }
 }
@@ -197,7 +227,11 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
             r.dir_name.clone(),
             dur,
             format_size(r.size_bytes),
-            if r.has_transcript { "✓" } else { "" }.to_string(),
+            match app.jobs.get(&r.dir_name) {
+                Some(job) => job.short(),
+                None if r.has_transcript => "✓".to_string(),
+                None => String::new(),
+            },
         ])
     });
     let table = Table::new(
@@ -206,7 +240,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
             Constraint::Fill(1),
             Constraint::Length(9),
             Constraint::Length(10),
-            Constraint::Length(2),
+            Constraint::Length(7),
         ],
     )
     .header(Row::new(vec!["NAME", "LENGTH", "SIZE", "T"]).style(DIM))
@@ -326,7 +360,11 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
         kv("Size", format_size(r.size_bytes)),
         kv(
             "Transcript",
-            if r.has_transcript { "yes" } else { "none yet" }.to_string(),
+            match app.jobs.get(&r.dir_name) {
+                Some(job) => format!("{} - c to cancel", job.describe()),
+                None if r.has_transcript => "yes".to_string(),
+                None => "none yet (t to transcribe)".to_string(),
+            },
         ),
         Line::raw(""),
     ];
@@ -349,7 +387,11 @@ fn draw_help(frame: &mut Frame, area: Rect) {
         ("s / q / ctrl+c", "stop & save (while recording)"),
         ("x", "discard recording (asks first)"),
         ("enter", "open recording details"),
-        ("t", "transcribe (not implemented yet)"),
+        (
+            "t",
+            "transcribe in the background (asks before downloading a model)",
+        ),
+        ("c", "cancel the selected recording's transcription"),
         ("o", "reveal in file manager"),
         ("d", "delete -> Recycle Bin / Trash (asks first)"),
         ("/", "filter by name"),
@@ -382,6 +424,18 @@ fn draw_modal(frame: &mut Frame, modal: &Modal, area: Rect) {
         Modal::ConfirmDiscard => (
             " Discard recording? ",
             "Stop and delete this recording?".to_string(),
+        ),
+        Modal::ConfirmOverwriteTranscript { dir_name } => (
+            " Replace transcript? ",
+            format!("{dir_name} is already transcribed. Transcribe again and replace it?"),
+        ),
+        Modal::ConfirmDownloadModel { model, size_text, .. } => (
+            " Download speech model? ",
+            format!("The model {model} ({size_text}) is not on this computer yet. Download it from huggingface.co?"),
+        ),
+        Modal::ConfirmQuitWithJobs => (
+            " Quit? ",
+            "Transcription is still running. Quit and cancel it?".to_string(),
         ),
     };
     let rect = centered(60, 6, area);
@@ -506,6 +560,82 @@ mod tests {
         assert!(out.contains("2.0 KB"), "size column");
         assert!(out.contains('✓'), "transcript flag");
         assert!(out.contains("record") && out.contains("quit"));
+    }
+
+    #[test]
+    fn the_hint_bar_always_keeps_help_and_quit_however_narrow_the_terminal() {
+        for width in [40u16, 60, 70, 80, 100, 120] {
+            let out = render(&app(), width, 10);
+            let last = out.lines().last().unwrap_or("");
+            assert!(
+                last.contains("help") && last.contains("quit"),
+                "width {width}: {last:?}"
+            );
+            assert!(
+                last.contains("transcribe") || width < 50,
+                "width {width}: {last:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_wide_terminal_shows_every_hint() {
+        let out = render(&app(), 120, 10);
+        let last = out.lines().last().unwrap_or("");
+        for want in [
+            "record",
+            "open",
+            "filter",
+            "transcribe",
+            "reveal",
+            "delete",
+            "help",
+            "quit",
+        ] {
+            assert!(last.contains(want), "{want} missing: {last:?}");
+        }
+    }
+
+    #[test]
+    fn a_running_job_shows_in_the_list_and_the_detail_view() {
+        let mut a = app();
+        a.on_transcribe_state(
+            "2026-10-22-1430-standup",
+            crate::app::JobState::Transcribing(37),
+        );
+        let list = render(&a, 100, 12);
+        assert!(list.contains("37%"), "{list}");
+
+        a.screen = Screen::Detail;
+        let detail = render(&a, 100, 12);
+        assert!(
+            detail.contains("transcribing (37%)") && detail.contains("c to cancel"),
+            "{detail}"
+        );
+    }
+
+    #[test]
+    fn the_new_dialogs_render_their_question() {
+        let mut a = app();
+        a.modal = Some(Modal::ConfirmOverwriteTranscript {
+            dir_name: "2026-10-22-1430-standup".into(),
+        });
+        assert!(render(&a, 100, 14).contains("replace it"));
+        a.modal = Some(Modal::ConfirmDownloadModel {
+            dir_name: "x".into(),
+            model: "large-v3-turbo".into(),
+            size_text: "1.5 GiB".into(),
+            overwrite: false,
+        });
+        let out = render(&a, 100, 14);
+        assert!(
+            out.contains("large-v3-turbo")
+                && out.contains("1.5 GiB")
+                && out.contains("huggingface.co"),
+            "{out}"
+        );
+        a.modal = Some(Modal::ConfirmQuitWithJobs);
+        assert!(render(&a, 100, 14).contains("cancel it"));
     }
 
     #[test]

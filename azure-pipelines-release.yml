@@ -69,6 +69,9 @@ stages:
             name: version
             displayName: Check tag matches Cargo.toml version
 
+          - pwsh: ./eng/ci-native-deps.ps1
+            displayName: Install native build tools (CMake, libclang)
+
           - script: cargo build --release --locked -p nastro -p nastro-tap
             displayName: Build release binaries
 
@@ -118,6 +121,9 @@ stages:
               Expand-Archive $zip.FullName "$(Agent.TempDirectory)\verify"
               $dir = Get-ChildItem "$(Agent.TempDirectory)\verify" | Select-Object -First 1
               & "$($dir.FullName)\nastro.exe" --version
+              # Speech recognition is linked in: make sure the shipped binary starts and knows its models.
+              & "$($dir.FullName)\nastro.exe" transcribe --list-models | Select-Object -First 3
+              if ($LASTEXITCODE -ne 0) { throw "nastro transcribe --list-models failed" }
               $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
               foreach ($f in 'nastro.exe','nastro-tap.exe') {
                 $out = & $signtool.FullName verify /pa /v "$($dir.FullName)\$f" 2>&1
@@ -140,6 +146,9 @@ stages:
               sudo apt-get install -y libpulse-dev
             displayName: Install libpulse-dev (link-time dependency)
 
+          - pwsh: ./eng/ci-native-deps.ps1
+            displayName: Install native build tools (CMake, libclang)
+
           - script: cargo build --release --locked -p nastro -p nastro-tap
             displayName: Build release binaries
 
@@ -152,6 +161,7 @@ stages:
               tar -xzf dist/*.tar.gz -C "$(Agent.TempDirectory)/verify"
               d=$(ls -d "$(Agent.TempDirectory)/verify"/*/)
               "$d/nastro" --version
+              "$d/nastro" transcribe --list-models | head -3
               echo "--- dynamic dependencies ---"
               ldd "$d/nastro" "$d/nastro-tap" | tee "$(Agent.TempDirectory)/ldd.txt"
               if grep -q "not found" "$(Agent.TempDirectory)/ldd.txt"; then echo "unresolved shared library"; exit 1; fi

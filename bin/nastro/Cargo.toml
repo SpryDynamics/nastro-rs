@@ -22,6 +22,7 @@ nastro-config.workspace = true
 nastro-records.workspace = true
 nastro-record.workspace = true
 nastro-tui.workspace = true
+nastro-transcribe.workspace = true
 
 [dev-dependencies]
 portable-pty = "0.9"

@@ -50,8 +50,7 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
   (`+frag_keyframe+empty_moov+default_base_moof`, `-frag_duration 1s`,
   `-flush_packets 1`) for crash safety. Replaced the interim WAV writer.
 - `metadata.json` duration writer (every 5s, matching the original cadence).
-- Not yet done: `nastro transcribe`'s 16 kHz resample step (Phase 7) will reuse this
-  same ffmpeg dependency.
+- The 16 kHz resample step for `nastro transcribe` (Phase 7) reuses this same ffmpeg dependency.
 
 ## Phase 5 - TUI/CLI (`nastro-tui`, `bin/nastro`) (done, Windows-verified)
 - `ratatui` port of the list / name-form / recording / detail / help screens, with
@@ -63,7 +62,7 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
   character of an escape sequence as visible, which corrupts layout.
 - Not yet exercised live: reveal-in-Explorer (opens a window) and the Linux TUI path
   against a real Linux terminal/trash.
-- Placeholder: the `t` key / `nastro transcribe` report "not implemented" (Phase 7).
+- The `t` key / `nastro transcribe` are implemented in Phase 7.
 
 ## Phase 6 - Packaging/CI/release (done; see `docs/releasing.md`)
 - Release artifacts: Windows zip and Linux tarball, each with both binaries, the
@@ -79,14 +78,21 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - GitHub issues/PRs synced two-way with Azure Boards (private); PRs are ported by hand to keep the mirror fast-forward only.
 - Not done: aarch64, installers (MSI/winget/deb).
 
-## Phase 7 - Transcription (deferred)
-- `nastro-transcribe` crate wrapping `whisper-rs` (vendored whisper.cpp), ggml model
-  management (download + SHA-256 verify), resampling via the Phase 4 ffmpeg
-  dependency.
-- Diarization (whisperx/pyannote): no clean embeddable Rust equivalent identified;
-  likely stays an optional external-process integration, revisited after core
-  transcription ships.
-
+## Phase 7 - Transcription (done; Windows- and Linux-verified)
+- `nastro-transcribe`: `ffmpeg` decodes `audio.m4a` to 16 kHz mono f32, embedded whisper.cpp (`whisper-rs`, statically
+  linked) recognises it, `transcript.txt` + `transcript.srt` are written atomically with private permissions.
+- Models: pinned `ggerganov/whisper.cpp` revision, size + SHA-256 verified before use, downloaded only with consent.
+- CLI `nastro transcribe <id|last>` (`--model`, `--lang`, `--threads`, `--force`, `--yes`, `--list-models`) and the TUI's
+  background jobs (progress, queue, cancel, confirmations).
+- Verified with real speech and a real model on Windows and on Linux (Ubuntu 24.04 under WSL2), including through the
+  real TUI in a pseudo-terminal; default model `large-v3-turbo` measured at ~2x real time on a 16-core CPU.
+- Not done / next:
+  - GPU acceleration (Vulkan, which would also cover AMD/Intel): needs a decision on how to ship a binary that still
+    starts on machines without a Vulkan loader.
+  - Speaker labels (the original's `whisperx` backend): no clean embeddable Rust equivalent; likely an optional
+    external-process integration.
+  - Long recordings are decoded whole into memory (limit 6 hours); chunked streaming would lift that.
+  - aarch64 builds (the AVX2 baseline is x86-64 only).
 ## Explicitly out of scope
 - macOS support (the original project's primary/only target) - this port targets
   Windows + Linux only.

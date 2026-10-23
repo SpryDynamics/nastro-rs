@@ -4,16 +4,18 @@ A Rust port of [scaccogatto/nastro](https://github.com/scaccogatto/nastro) - a
 terminal-native call recorder (system audio + mic, local files, on-device
 transcription) - retargeted from **macOS-only** to **Windows + Linux**.
 
-> **Status: recording and browsing work on Windows; transcription is not built
-> yet.** Run `nastro` for a full-screen terminal UI (browse, record, filter,
-> delete to the Recycle Bin, reveal in Explorer), or `nastro record` for headless
-> recording. Capture is verified against real hardware on Windows (WASAPI). On
+> **Status: recording, browsing and transcription work.** Run `nastro` for a
+> full-screen terminal UI (browse, record, transcribe, filter, delete to the
+> Recycle Bin, reveal in Explorer), `nastro record` for headless recording, or
+> `nastro transcribe last` to turn the newest recording into text, entirely on
+> this computer. Capture is verified against real hardware on Windows (WASAPI). On
 > Linux it has run against a real PulseAudio-protocol server (WSLg on Ubuntu
 > 24.04): mic and system capture both opened and produced valid files, but only
 > silence was observed, so audio *content* and a native PipeWire/PulseAudio
 > desktop are still unverified. Recordings are AAC/.m4a (fragmented MP4, so
-> they survive a crash) via an external `ffmpeg`. `nastro transcribe` and the
-> `t` key are placeholders. See
+> they survive a crash) via an external `ffmpeg`. Transcription is verified on
+> Windows and Linux (real model, real speech); speaker labels (`whisperx`) are not
+> implemented. See
 > [`CHANGELOG.md`](CHANGELOG.md) for exact scope and [`docs/`](docs/) for the
 > phased build plan.
 
@@ -48,6 +50,7 @@ crates/
   nastro-record/   recording session orchestration (done)
   nastro-audio/    capture/mixer core + platform backends (done; Windows-verified, Linux verified on WSLg PulseAudio)
   nastro-tui/      ratatui screens + state machine (done)
+  nastro-transcribe/  on-device speech-to-text: embedded whisper.cpp, model download + verification (done)
 bin/
   nastro/          CLI/TUI entry point
   nastro-tap/      capture helper (spawned by nastro, talks over stdio)
@@ -65,18 +68,38 @@ Windows binaries are signed by Spry Dynamics, LLC. Nothing is installed system-w
 ## Requirements
 
 - **FFmpeg** on `PATH` (or set `NASTRO_FFMPEG` to the executable). It is run as a
-  separate process to encode AAC/.m4a and is not bundled - see
-  [`NOTICE.md`](NOTICE.md). Windows: `winget install Gyan.FFmpeg`;
-  Debian/Ubuntu: `sudo apt install ffmpeg`.
+  separate process to encode AAC/.m4a and to read recordings back for transcription,
+  and is not bundled - see [`NOTICE.md`](NOTICE.md). Windows:
+  `winget install Gyan.FFmpeg`; Debian/Ubuntu: `sudo apt install ffmpeg`.
+- **For transcription**: an x86-64 CPU with AVX2 (anything from about 2013), and for
+  the default model about 2.5 GB of free memory. The speech engine is built in; the
+  speech *model* is downloaded on first use (see [Transcription](#transcription)).
 
 ## Build
 
-**Linux only**: install the PulseAudio dev headers/libs first (needed to link
+Transcription embeds [whisper.cpp](https://github.com/ggml-org/whisper.cpp), which Cargo
+compiles from source, so building needs **CMake**, a **C/C++ compiler** and **libclang**
+(for the Rust bindings):
+
+```powershell
+# Windows: Visual Studio Build Tools (C++ workload) already provide CMake; add LLVM for libclang
+winget install LLVM.LLVM          # then: $env:LIBCLANG_PATH = "C:\Program Files\LLVM\bin"
+```
+```bash
+# Debian/Ubuntu
+sudo apt-get install -y cmake clang libclang-dev
+```
+
+**Linux only**: also install the PulseAudio dev headers/libs (needed to link
 `nastro-audio`'s system-audio/mic backend):
 ```bash
 sudo apt-get install -y libpulse-dev   # Debian/Ubuntu
 # or: sudo dnf install -y pulseaudio-libs-devel   # Fedora
 ```
+
+`.cargo/config.toml` pins the whisper.cpp build to a portable x86-64 baseline (AVX2) and
+restores optimisation flags the `cmake` crate would otherwise drop on MSVC (without them
+transcription is about 10x slower); read the comments there before changing it.
 
 ```powershell
 cargo build --workspace
@@ -92,6 +115,7 @@ cargo fmt --all -- --check
 cargo run --bin nastro                                   # the TUI
 cargo run --bin nastro -- records --plain                # scriptable, tab-separated
 cargo run --bin nastro -- record --name "Weekly Sync"    # headless; Ctrl+C stops & saves
+cargo run --bin nastro -- transcribe last                # speech to text for the newest recording
 ```
 
 When stdin/stdout isn't a terminal (piped, redirected), `nastro` and
@@ -105,6 +129,8 @@ When stdin/stdout isn't a terminal (piped, redirected), `nastro` and
 | `s` / `q` / `Ctrl+C` | stop and save (while recording; under 2 seconds is discarded) |
 | `x` | discard the live recording (asks first) |
 | `Enter` | open a recording (shows a transcript preview if one exists) |
+| `t` | transcribe the selected recording in the background (asks before replacing a transcript or downloading a model) |
+| `c` | cancel the selected recording's transcription |
 | `o` | reveal in Explorer / file manager |
 | `d` | delete to the Recycle Bin / Trash (asks first; only `y` confirms) |
 | `/` | filter by name |
@@ -115,6 +141,40 @@ When stdin/stdout isn't a terminal (piped, redirected), `nastro` and
 Delete never falls back to a permanent delete: if the Recycle Bin / Trash can't be
 used you get an error and nothing is removed.
 
+### Transcription
+
+```powershell
+nastro transcribe last                 # or a recording id (its folder name)
+nastro transcribe last --model small   # a smaller, faster model
+nastro transcribe --list-models        # what can be downloaded, and what is installed
+```
+
+It writes `transcript.txt` (one phrase per line) and `transcript.srt` (with timestamps)
+next to `audio.m4a`; the TUI shows the text in the recording's detail view. It runs
+**entirely on this computer**: nothing is uploaded, and after the one-time model
+download it works offline.
+
+- **Models** are Whisper models in ggml format, downloaded on first use from
+  `huggingface.co/ggerganov/whisper.cpp` (pinned to an exact revision) and checked against a
+  SHA-256 built into nastro before use; a corrupted or tampered download is discarded.
+  nastro always asks before downloading (`--yes` to skip the question). They are kept in
+  `~/.cache/whisper` (Linux) / `%LOCALAPPDATA%\whisper` (Windows), or `$NASTRO_MODEL_DIR`. The
+  default, `large-v3-turbo`, is about 1.5 GB; `base`/`small` (and the `-q5` quantised variants) are
+  much smaller and faster, and `.en` models are English-only. `whisper_model` can also be a path to a
+  ggml `.bin` file.
+- **Speed**: on CPU, the default model runs at roughly 2x real time on a 16-core desktop
+  (3:40 of audio in about 1m50s) and needs ~2.1 GB of memory. Smaller models are far faster: the
+  `tiny.en` model did the same recording in under 10 seconds, at lower accuracy.
+  Threads default to the number of physical cores and cannot be set higher than that: whisper.cpp's
+  threads spin-wait on each other, and using every hardware thread makes it collapse to a crawl
+  rather than speed up. GPU acceleration is not used yet.
+- **Safe to interrupt**: Ctrl+C (or `c` in the TUI) cancels within a fraction of a second. A
+  transcript is only ever replaced once the new one is complete, so a cancelled or failed
+  run leaves any existing transcript untouched.
+- A recording that is still being recorded cannot be transcribed; silence gives an empty
+  transcript rather than invented words.
+- `transcriber = "whisperx"` (speaker labels) is not implemented in this port.
+
 ### Config
 
 `--config <path>` (or the `NASTRO_CONFIG` environment variable) selects a config
@@ -122,12 +182,15 @@ file explicitly; a file you name that fails to parse is an error rather than a
 silent fall back to defaults. Otherwise config is read from `%APPDATA%\nastro\config.toml` (Windows) /
 `~/.config/nastro/config.toml` (Linux); see `nastro-config`'s `ConfigFile` for the
 available keys. A missing config file is not an error - sane defaults apply
-(`~/Recordings/nastro`, `large-v3-turbo`, etc.).
+(`~/Recordings/nastro`, `large-v3-turbo`, etc.). The transcription keys are `whisper_model`
+(a model name or path), `lang` (`auto` or a code such as `en`), `transcriber` (`whisper`) and
+`max_parallel_transcriptions` (how many the TUI runs at once; default 2).
 
 ## Contributing
 
 Issues and pull requests are welcome; please read [CONTRIBUTING.md](CONTRIBUTING.md) first (this repository is a mirror,
 so PRs are ported by hand). Report security problems privately, see [SECURITY.md](SECURITY.md).
+
 ## License
 
 MIT, see [`LICENSE`](LICENSE). This is an independent reimplementation (see

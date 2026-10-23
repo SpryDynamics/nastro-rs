@@ -15,6 +15,7 @@ trash.workspace = true
 nastro-config.workspace = true
 nastro-records.workspace = true
 nastro-record.workspace = true
+nastro-transcribe.workspace = true
 
 [dev-dependencies]
 tempfile = "3"

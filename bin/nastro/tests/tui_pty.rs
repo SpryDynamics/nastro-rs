@@ -31,6 +31,10 @@ impl Term {
     }
 
     fn launch_with_args(config: &Path, args: &[&str]) -> Self {
+        Self::launch_with(config, args, &[])
+    }
+
+    fn launch_with(config: &Path, args: &[&str], envs: &[(&str, &Path)]) -> Self {
         let pair = native_pty_system()
             .openpty(PtySize {
                 rows: ROWS,
@@ -43,6 +47,9 @@ impl Term {
         let mut cmd = CommandBuilder::new(env!("CARGO_BIN_EXE_nastro"));
         cmd.args(args);
         cmd.env("NASTRO_CONFIG", config);
+        for (k, v) in envs {
+            cmd.env(k, v);
+        }
         let child = pair.slave.spawn_command(cmd).expect("spawn nastro");
         drop(pair.slave);
 
@@ -396,4 +403,150 @@ fn sigterm_exits_cleanly_and_restores_the_terminal() {
             "{signal}: must leave the alternate screen"
         );
     }
+}
+
+// ------------------------------------------------------------------ transcription
+
+/// Like `seed`, but with a chosen config body appended (e.g. a model or transcriber).
+fn seed_with(root: &Path, extra_config: &str) -> PathBuf {
+    let config = seed(root);
+    let mut body = std::fs::read_to_string(&config).unwrap();
+    body.push_str(extra_config);
+    std::fs::write(&config, body).unwrap();
+    config
+}
+
+#[test]
+fn t_asks_before_downloading_a_missing_model_and_declining_downloads_nothing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let models = tmp.path().join("models"); // empty: the model is not installed
+    std::fs::create_dir_all(&models).unwrap();
+    let config = seed_with(tmp.path(), "whisper_model = 'tiny.en'\n");
+    let mut t = Term::launch_with(&config, &[], &[("NASTRO_MODEL_DIR", &models)]);
+
+    t.wait_for("3 recordings");
+    t.send(b"j"); // 2026-10-21-1000-planning: no transcript yet
+    t.send(b"t");
+    t.wait_for("Download speech model?");
+    let c = t.contents();
+    assert!(c.contains("tiny.en") && c.contains("huggingface.co"), "{c}");
+
+    t.send(b"n");
+    t.wait_until("dialog to close", |c| !c.contains("Download speech model?"));
+    assert_eq!(
+        std::fs::read_dir(&models).unwrap().count(),
+        0,
+        "declining must not download (or start downloading) anything"
+    );
+    assert!(!tmp
+        .path()
+        .join("recordings/2026-10-21-1000-planning/transcript.txt")
+        .exists());
+
+    t.send(b"q");
+    assert!(t.wait_exit(), "no job is running, so q quits straight away");
+}
+
+#[test]
+fn an_unsupported_transcriber_is_explained_in_the_status_bar() {
+    let tmp = tempfile::tempdir().unwrap();
+    let config = seed_with(tmp.path(), "transcriber = 'whisperx'\n");
+    let mut t = Term::launch(&config);
+
+    t.wait_for("3 recordings");
+    t.send(b"j");
+    t.send(b"t");
+    t.wait_for("whisperx");
+    t.send(b"q");
+    assert!(t.wait_exit());
+}
+
+fn ffmpeg_program() -> std::ffi::OsString {
+    std::env::var_os("NASTRO_FFMPEG").unwrap_or_else(|| "ffmpeg".into())
+}
+
+fn ffmpeg_ok() -> bool {
+    std::process::Command::new(ffmpeg_program())
+        .arg("-version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// The whole feature through the real TUI: press `t`, watch it run in the background, see the transcript. Needs
+/// ffmpeg and a model, so like the library's end-to-end tests it only runs when asked
+/// (`NASTRO_TEST_WHISPER_MODEL=<file>` or `NASTRO_TEST_DOWNLOAD_MODEL=1`), and `NASTRO_REQUIRE_WHISPER=1` turns a
+/// skip into a failure.
+#[test]
+fn t_transcribes_in_the_background_and_the_transcript_appears() {
+    let require = std::env::var_os("NASTRO_REQUIRE_WHISPER").is_some();
+    let model: PathBuf = if let Some(p) = std::env::var_os("NASTRO_TEST_WHISPER_MODEL") {
+        p.into()
+    } else if std::env::var_os("NASTRO_TEST_DOWNLOAD_MODEL").is_some() {
+        nastro_transcribe::models::ensure(
+            "tiny.en",
+            &nastro_transcribe::CancelToken::new(),
+            &mut |_, _| {},
+        )
+        .expect("model download")
+    } else {
+        assert!(
+            !require,
+            "NASTRO_REQUIRE_WHISPER is set but no model was provided"
+        );
+        eprintln!("skipping: set NASTRO_TEST_WHISPER_MODEL or NASTRO_TEST_DOWNLOAD_MODEL=1");
+        return;
+    };
+    if !ffmpeg_ok() {
+        assert!(
+            !require,
+            "NASTRO_REQUIRE_WHISPER is set but ffmpeg is missing"
+        );
+        eprintln!("skipping: ffmpeg is not installed");
+        return;
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let config = seed_with(
+        tmp.path(),
+        &format!("whisper_model = '{}'\nlang = 'en'\n", model.display()),
+    );
+    // A real recording (newest, so it is the first row): the public-domain JFK sample as AAC in MP4.
+    let name = "2026-10-23-0900-speech";
+    let dir = tmp.path().join("recordings").join(name);
+    std::fs::create_dir_all(&dir).unwrap();
+    let wav = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../crates/nastro-transcribe/tests/fixtures/jfk.wav");
+    let status = std::process::Command::new(ffmpeg_program())
+        .args(["-hide_banner", "-loglevel", "error", "-i"])
+        .arg(&wav)
+        .args(["-ac", "1", "-c:a", "aac", "-b:a", "64k", "-y"])
+        .arg(dir.join("audio.m4a"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+    std::fs::write(dir.join("metadata.json"), r#"{"duration_seconds": 11.0}"#).unwrap();
+
+    let mut t = Term::launch(&config);
+    t.wait_for("4 recordings");
+    t.send(b"t"); // the newest recording is selected
+    t.wait_for(&format!("Transcribed {name}"));
+
+    let txt = std::fs::read_to_string(dir.join("transcript.txt")).unwrap();
+    assert!(
+        txt.to_lowercase()
+            .contains("ask not what your country can do for you"),
+        "{txt:?}"
+    );
+    assert!(dir.join("transcript.srt").exists());
+    // Opening the recording shows the new transcript.
+    t.send(b"\r");
+    t.wait_for("Transcript preview");
+    t.wait_for("your country");
+
+    // Wait for the screen to change between Esc and q: sent together, a Unix terminal reads them as Alt+q.
+    t.send(b"\x1b");
+    t.wait_until("return to list", |c| !c.contains("Transcript preview"));
+    t.send(b"q");
+    assert!(t.wait_exit());
 }

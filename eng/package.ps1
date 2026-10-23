@@ -65,7 +65,14 @@ nastro $Version ($osName $arch)
 
 Run-time requirements
   * ffmpeg on PATH (or set NASTRO_FFMPEG to its full path). nastro runs it as a
-    separate program to encode AAC/.m4a. It is NOT included in this archive.
+    separate program to encode AAC/.m4a when recording, and to read a recording back
+    when transcribing. It is NOT included in this archive.
+  * Transcription ('nastro transcribe', or 't' in the TUI) needs a CPU with AVX2/FMA/F16C
+    (any x86-64 CPU from about 2013 on) and, for the default model, about 2.5 GB of free
+    memory. The speech engine is built in. The speech model is not: it is downloaded the
+    first time you transcribe (the default large-v3-turbo is about 1.5 GB; 'nastro
+    transcribe --list-models' shows smaller, faster ones) from huggingface.co and checked
+    against a SHA-256 built into nastro. After that, transcription works offline.
 "@
 if (-not $onWindows) {
     $requirements += @"

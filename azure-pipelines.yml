@@ -46,6 +46,18 @@ stages:
             condition: eq(variables['imageName'], 'windows-latest')
             continueOnError: true
 
+          # Transcription embeds whisper.cpp, which is compiled from source: it needs CMake and libclang.
+          - pwsh: ./eng/ci-native-deps.ps1
+            displayName: Install native build tools (CMake, libclang)
+
+          # The end-to-end transcription tests run a real (tiny, 75 MB) model on real speech. It is downloaded
+          # and SHA-256-verified by nastro itself; the cache just avoids fetching it on every run.
+          - task: Cache@2
+            displayName: Cache the test speech model
+            inputs:
+              key: 'whisper-models | "$(Agent.OS)" | tiny.en | v1'
+              path: $(Pipeline.Workspace)/whisper-models
+
           - script: cargo build --workspace --all-targets
             displayName: Build
 
@@ -55,6 +67,11 @@ stages:
               # Fail (don't silently skip) if ffmpeg is missing, so the real-encoder
               # round trip is guaranteed to have run.
               NASTRO_REQUIRE_FFMPEG: "1"
+              # Likewise for transcription: a real model, real ffmpeg, real speech, through the library, the
+              # CLI and the TUI. Without these the tests would skip rather than fail.
+              NASTRO_REQUIRE_WHISPER: "1"
+              NASTRO_TEST_DOWNLOAD_MODEL: "1"
+              NASTRO_MODEL_DIR: $(Pipeline.Workspace)/whisper-models
 
           - script: cargo clippy --workspace --all-targets -- -D warnings
             displayName: Clippy

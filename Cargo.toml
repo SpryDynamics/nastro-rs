@@ -6,6 +6,7 @@ members = [
     "crates/nastro-record",
     "crates/nastro-audio",
     "crates/nastro-tui",
+    "crates/nastro-transcribe",
     "bin/nastro",
     "bin/nastro-tap",
 ]
@@ -24,6 +25,7 @@ nastro-records = { path = "crates/nastro-records" }
 nastro-record = { path = "crates/nastro-record" }
 nastro-audio = { path = "crates/nastro-audio" }
 nastro-tui = { path = "crates/nastro-tui" }
+nastro-transcribe = { path = "crates/nastro-transcribe" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
