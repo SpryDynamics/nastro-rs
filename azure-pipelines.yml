@@ -28,6 +28,12 @@ stages:
               rustup component add clippy rustfmt
             displayName: Install clippy/rustfmt components
 
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y libpulse-dev
+            displayName: Install libpulse-dev (Linux audio backend link dependency)
+            condition: eq(variables['imageName'], 'ubuntu-latest')
+
           - script: cargo build --workspace --all-targets
             displayName: Build
 

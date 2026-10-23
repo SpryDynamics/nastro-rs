@@ -52,6 +52,13 @@ bin/
 
 ## Build
 
+**Linux only**: install the PulseAudio dev headers/libs first (needed to link
+`nastro-audio`'s system-audio/mic backend):
+```bash
+sudo apt-get install -y libpulse-dev   # Debian/Ubuntu
+# or: sudo dnf install -y pulseaudio-libs-devel   # Fedora
+```
+
 ```powershell
 cargo build --workspace
 cargo test --workspace
