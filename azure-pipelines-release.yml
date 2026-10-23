@@ -21,14 +21,33 @@ parameters:
     type: boolean
     default: true
 
+  # What to do on GitHub after the archives are built and verified.
+  #   auto    - publish a GitHub release on v* tag runs, do nothing otherwise
+  #   dry-run - full draft+verify path against a throwaway tag, then delete it (nothing public)
+  #   off     - never touch GitHub
+  - name: githubRelease
+    displayName: GitHub release
+    type: string
+    default: auto
+    values:
+      - auto
+      - dry-run
+      - off
+
 variables:
   # Service connection (workload identity federation, no secret). Its only Azure
-  # permission is "Artifact Signing Certificate Profile Signer" on the
-  # SpryDynamicsAppSignPublic certificate profile.
+  # permissions are "Artifact Signing Certificate Profile Signer" on the
+  # SpryDynamicsAppSignPublic certificate profile, and "Key Vault Secrets User" on the
+  # single github-app-private-key secret (to publish GitHub releases).
   signingServiceConnection: nastro-artifact-signing
   # Pinned so a release can never pick up a newer, unreviewed signing toolchain.
   azArtifactSignVersion: 0.1.0
   signCliVersion: 0.9.1-beta.26475.3
+  # Identifiers (not secrets) for the GitHub App that publishes releases. Its private key
+  # lives only in this Key Vault secret; the signing identity can read that one secret.
+  githubKeyVault: kv-sdsync-b748b4
+  githubAppClientId: Iv23liM17ILB0MLQQSwP
+  githubInstallationId: 174593191
   feedUrl: https://pkgs.dev.azure.com/sprydynamics/oss-tools/_packaging/oss-tools-feed/nuget/v3/index.json
 
 stages:
@@ -170,3 +189,49 @@ stages:
           - publish: release
             artifact: release
             displayName: Publish artifact (release)
+
+  - stage: GitHubRelease
+    displayName: Publish to GitHub
+    dependsOn: Release
+    condition: >-
+      and(succeeded(),
+          ne('${{ parameters.githubRelease }}', 'off'),
+          or(and(eq('${{ parameters.githubRelease }}', 'auto'), startsWith(variables['Build.SourceBranch'], 'refs/tags/v')),
+             eq('${{ parameters.githubRelease }}', 'dry-run')))
+    jobs:
+      - job: Publish
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            fetchTags: true
+            persistCredentials: false
+          - download: current
+            artifact: release
+
+          # An unsigned Windows build must never become a public release.
+          - pwsh: |
+              $tag = '$(Build.SourceBranch)' -like 'refs/tags/v*'
+              if ($tag -and '${{ parameters.signWindows }}' -ne 'true') { throw 'Refusing to publish a GitHub release from an unsigned Windows build.' }
+              Write-Host "tag run: $tag, signWindows: ${{ parameters.signWindows }}, githubRelease: ${{ parameters.githubRelease }}"
+            displayName: Guard - signed builds only
+
+          - ${{ if eq(parameters.githubRelease, 'dry-run') }}:
+              - task: AzureCLI@2
+                displayName: GitHub release - DRY RUN (draft, verify, delete)
+                inputs:
+                  azureSubscription: $(signingServiceConnection)
+                  scriptType: pscore
+                  scriptLocation: scriptPath
+                  scriptPath: eng/release-to-github.ps1
+                  arguments: -AssetsDir $(Pipeline.Workspace)/release -KeyVaultName $(githubKeyVault) -ClientId $(githubAppClientId) -InstallationId $(githubInstallationId) -DryRun
+          - ${{ else }}:
+              - task: AzureCLI@2
+                displayName: GitHub release (draft, verify, publish)
+                inputs:
+                  azureSubscription: $(signingServiceConnection)
+                  scriptType: pscore
+                  scriptLocation: scriptPath
+                  scriptPath: eng/release-to-github.ps1
+                  arguments: -AssetsDir $(Pipeline.Workspace)/release -KeyVaultName $(githubKeyVault) -ClientId $(githubAppClientId) -InstallationId $(githubInstallationId)
