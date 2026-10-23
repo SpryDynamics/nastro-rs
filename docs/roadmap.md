@@ -22,16 +22,28 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - Not yet exercised against *real* capture, since `nastro-audio`/`nastro-tap`
   (Phase 3) don't actually capture audio yet.
 
-## Phase 3 - Audio capture (`nastro-audio` + `nastro-tap`)
+## Phase 3 - Audio capture (`nastro-audio` + `nastro-tap`) (done, Windows-verified)
 - Platform-agnostic ring buffer / wall-clock-driven mixer / rate-drift watcher
   (ported from the original Swift `SampleMixer`/`AudioRingBuffer`/`RateWatcher`
   design - see the original project's `docs/stack.md` for the sample-rate-mismatch
-  postmortem that shaped that design).
+  postmortem that shaped that design). 29 unit tests.
 - Windows: `wasapi` crate, loopback capture on the default render endpoint + normal
-  mic capture, device-change handling via `IMMNotificationClient`.
-- Linux: mic via `cpal` (ALSA); system audio via `libpulse-binding` opening
-  `<default-sink>.monitor` (works under PulseAudio and PipeWire's pulse-compat
-  layer), default-sink-change handling via Pulse's subscribe API.
+  mic capture, both shared-mode with `autoconvert`. **Verified against real
+  hardware**: both sources captured real, correctly-rated audio.
+- Linux: system audio via `libpulse-binding`/`libpulse-simple-binding` opening
+  `<default-sink>.monitor` (device name resolved via `pactl get-default-sink`;
+  works under both PulseAudio and PipeWire's pulse-compat layer); mic via the
+  same blocking `Simple` API against the default source. **Compiles under CI's
+  Linux leg only - not validated against real hardware** (no Linux audio stack
+  available in this environment). `cpal` was considered for mic capture but
+  dropped in favor of reusing the same Pulse `Simple` API for both sources,
+  avoiding a second audio stack dependency.
+- Not yet implemented: `IMMNotificationClient`/Pulse-subscribe-API device-change
+  handling (reacting to the default device changing mid-recording) - deferred,
+  not blocking for a first working capture path.
+- `nastro-tap` wired to real capture end-to-end, with an interim 16-bit PCM WAV
+  writer (periodic header rewrite for crash safety) standing in for Phase 4's
+  AAC/M4A muxing.
 
 ## Phase 4 - Incremental AAC/M4A muxing
 - `ffmpeg` subprocess, PCM piped via stdin, fragmented-MP4 flags

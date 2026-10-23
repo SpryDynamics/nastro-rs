@@ -4,14 +4,15 @@ A Rust port of [scaccogatto/nastro](https://github.com/scaccogatto/nastro) - a
 terminal-native call recorder (system audio + mic, local files, on-device
 transcription) - retargeted from **macOS-only** to **Windows + Linux**.
 
-> **Status: early scaffold.** Config loading, the recordings browser
-> (`nastro records`), and recording *session orchestration* (`nastro record`:
-> locking, disk-space checks, anti-sleep, spawning/supervising the capture helper,
-> graceful stop) are fully functional. Actual audio capture, transcription, and the
-> TUI are not yet implemented - `nastro-tap` is currently a stub, so `nastro record`
-> runs the whole pipeline correctly but can't record audio yet. See
-> [`CHANGELOG.md`](CHANGELOG.md) for exact scope and [`docs/`](docs/) for the phased
-> build plan.
+> **Status: core recording pipeline works on Windows.** Config loading, the
+> recordings browser, session orchestration, and **real audio capture** are all
+> functional: `nastro record` actually records system audio + mic to a playable
+> file on Windows today (WASAPI, verified against real hardware). The Linux
+> capture backend compiles but is unvalidated (no Linux audio stack available in
+> this dev environment). The audio format is an interim 16-bit WAV, not yet the
+> final AAC/.m4a (that's Phase 4). Transcription and the TUI are not yet
+> implemented. See [`CHANGELOG.md`](CHANGELOG.md) for exact scope and
+> [`docs/`](docs/) for the phased build plan.
 
 ## Why a port, and why these platform/format choices
 
@@ -42,7 +43,7 @@ crates/
   nastro-config/   TOML config load/defaults (done)
   nastro-records/  filesystem-as-database scan/formatting (done)
   nastro-record/   recording session orchestration (done)
-  nastro-audio/    capture/mixer core + platform backends (scaffold)
+  nastro-audio/    capture/mixer core + platform backends (done; Windows-verified, Linux compile-only)
   nastro-tui/      ratatui screens (scaffold)
 bin/
   nastro/          CLI/TUI entry point
@@ -64,7 +65,7 @@ cargo fmt --all -- --check
 ```powershell
 cargo run --bin nastro -- records --plain
 cargo run --bin nastro -- records
-cargo run --bin nastro -- record --name "Weekly Sync"   # orchestration works; nastro-tap is still a capture stub
+cargo run --bin nastro -- record --name "Weekly Sync"   # records real system audio + mic to a .wav (Windows)
 ```
 
 Config is read from `%APPDATA%\nastro\config.toml` (Windows) /

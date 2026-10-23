@@ -10,3 +10,14 @@ rust-version.workspace = true
 
 [dependencies]
 thiserror.workspace = true
+log = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+wasapi = "0.26"
+
+[target.'cfg(all(unix, target_os = "linux"))'.dependencies]
+libpulse-binding = "2"
+libpulse-simple-binding = "2"
+
+[dev-dependencies]
+env_logger = "0.11"

@@ -6,6 +6,44 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (Phase 3 - audio capture, `nastro-audio` + `nastro-tap`)
+
+- `nastro-audio` pure mixer core, ported from the original Swift
+  `SampleMixer`/`AudioRingBuffer`/`RateWatcher` design: `AudioRingBuffer` (bounded,
+  drops oldest on overflow), `SampleMixer` (wall-clock "frames owed" scheduling
+  with fractional carry-forward, zero-fill for an inactive source in
+  mic-only/system-only mode, soft-clamped sum), `RateWatcher` (2%-drift-for-two-
+  consecutive-windows detection, snap to nearest standard rate - a defensive
+  safety net, largely moot in practice given WASAPI's shared-mode autoconvert),
+  `compute_level` (RMS for the `level sys=.. mic=..` stdout contract). 29 unit
+  tests.
+- **Real, working Windows audio capture**: WASAPI backend using the documented
+  "initialize a Render-direction device's AudioClient for Direction::Capture"
+  loopback idiom for system audio, plus normal WASAPI capture for the
+  microphone, both shared-mode with `autoconvert` (resampling/downmixing handled
+  by the audio engine, not manually). Verified against real hardware on this
+  machine: both backends captured real, audible samples at the correct rate
+  while audio was actually playing (hardware-dependent tests, `#[ignore]`d by
+  default, not run in CI).
+- Linux backend (compiles under CI's Linux leg; **not** validated against real
+  hardware - no Linux audio stack available in this environment): system audio
+  via the default sink's PulseAudio/PipeWire monitor source
+  (`libpulse-simple-binding`, device resolved via `pactl get-default-sink`),
+  microphone via the same blocking `Simple` API against the default source.
+- `nastro-tap` is now a real capture helper, not a stub: spawns both
+  requested sources, mixes them on the `SampleMixer` schedule, writes real audio
+  incrementally to disk, reports `level sys=.. mic=..` once a second, and
+  responds to the Ctrl+C -> graceful-stop contract from Phase 2.
+- **Interim WAV writer** (`bin/nastro-tap/src/wav.rs`): 16-bit PCM, header
+  rewritten once a second (not just at the very end) so a hard kill loses at
+  most ~1s of "this file's data size" accuracy rather than leaving the whole
+  file looking empty - a stopgap for real crash safety pending Phase 4's
+  fragmented-MP4/`ffmpeg` muxing, which doesn't need this trick at all.
+  Verified end-to-end: forcibly killed `nastro-tap` mid-recording (simulating a
+  crash) while real audio played, and the resulting file's header matched its
+  actual written data within the 1s flush bound, with `metadata.json` present at
+  its own (upstream-matching) 5s cadence.
+
 ### Added (Phase 2 - record session orchestration)
 
 - `nastro-record`: fleshed out from a stub into a functional crate, ported from the
