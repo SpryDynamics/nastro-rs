@@ -6,6 +6,23 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (GitHub releases, issues and pull requests)
+
+- The release pipeline now ends with a **Publish to GitHub** stage: a draft release is created, every asset is
+  downloaded back and compared byte-for-byte with what was built, and only then is it published (`0.x` as a
+  pre-release). It refuses to run for an unsigned build. A `githubRelease=dry-run` parameter exercises everything
+  except publishing against a throwaway tag.
+- GitHub Issues and pull requests are enabled and synced with the maintainers' private Azure Boards by a separate
+  service. Only items that began on GitHub (or are explicitly marked public) are ever visible on GitHub, and only
+  comments that start with `/public` are published. Pull requests are ported by hand, keeping the mirror
+  fast-forward only.
+- Issue forms, a PR template, `CONTRIBUTING.md` (DCO sign-off) and `SECURITY.md` (private vulnerability reporting).
+- A ruleset on `main` blocks direct pushes, force pushes and deletion; only the mirror pipeline can update it.
+
+### Fixed
+
+- `eng/release-to-github.ps1` reported failure after a *successful* dry run, because the final "is the throwaway tag
+  gone?" check is expected to fail (404) and left a non-zero exit code behind.
 ### Added (Phase 6 - release packaging and signing)
 
 - `eng/package.ps1` packages built release binaries into

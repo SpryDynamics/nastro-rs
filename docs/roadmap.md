@@ -74,8 +74,10 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - The shipped archives are verified, not just built: signatures checked on the
   extracted binaries, the Linux tarball smoke-tested (`ldd`, checksum), and both
   downloaded and run on real machines.
-- One-way read-only GitHub mirror (SpryDynamics/nastro-rs) via a repo-scoped deploy key.
-- Not done: GitHub releases, aarch64, installers (MSI/winget/deb).
+- One-way GitHub mirror (SpryDynamics/nastro-rs) via a repo-scoped deploy key.
+- GitHub releases: draft -> verify (assets downloaded back and compared) -> publish, never from an unsigned build.
+- GitHub issues/PRs synced two-way with Azure Boards (private); PRs are ported by hand to keep the mirror fast-forward only.
+- Not done: aarch64, installers (MSI/winget/deb).
 
 ## Phase 7 - Transcription (deferred)
 - `nastro-transcribe` crate wrapping `whisper-rs` (vendored whisper.cpp), ggml model

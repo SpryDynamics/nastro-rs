@@ -81,8 +81,9 @@ az ad app federated-credential create --id <appObjectId> --parameters cred.json
 DevOps is the source of truth. The `nastro-rs-mirror` pipeline
 (`azure-pipelines-mirror.yml`) runs on pushes to `main` and on `v*` tags and publishes
 only those - never other branches. Pushes are fast-forward only, so if GitHub ever
-diverges the pipeline fails instead of overwriting. Issues and the wiki are disabled on
-the GitHub repo; contributions go through Azure DevOps.
+diverges the pipeline fails instead of overwriting. The wiki is disabled. Issues and PRs are
+enabled on GitHub and synced with Azure DevOps (see "Issues and pull requests" below); PRs are
+never merged on GitHub, they are ported by hand so that the mirror stays fast-forward only.
 
 - Credential: a GitHub **deploy key** with write access to that one repository only
   (not a personal token, so it can't reach anything else). The private half lives only as
@@ -93,16 +94,54 @@ the GitHub repo; contributions go through Azure DevOps.
   `base64` of the new private key. (`ssh-keygen -N ""` - quoting it as `'""'` on Windows
   sets a literal two-character passphrase and the pipeline will fail at "Install deploy
   key".)
-- Commits show as *Unverified* on GitHub: they are SSH-signed, but GitHub doesn't know the
-  signing key. Add the public key from `~/.ssh/allowed_signers` as a *Signing key* on the
-  account that should vouch for them.
+- Commits show as *Verified* on GitHub because the SSH signing public key (from
+  `~/.ssh/allowed_signers`) is registered as a *Signing key* on the maintainer's account. A commit signed
+  with any other key shows as *Unverified*.
 - Everything in the history is public, including the committer email
   `tfitts@sprydynamics.com` and the signing Entra app's client ID in this file (an
   identifier, not a credential; the app has no secrets).
 
+## GitHub releases
+
+A `v*` tag run of `nastro-rs-release` ends with a **Publish to GitHub** stage that attaches the *verified* archives
+and `SHA256SUMS` to a GitHub release. It never publishes an unsigned build (it refuses if `signWindows` is off), and
+it works in this order so nothing half-finished is ever public:
+
+1. verify the local archives against `SHA256SUMS`;
+2. make sure the tag exists on GitHub and points at the same commit (the mirror normally pushed it already);
+3. create a **draft** release (`0.x` versions are marked *pre-release*; notes come from `CHANGELOG.md`);
+4. download every asset back from GitHub and compare it byte-for-byte with what was built;
+5. only then publish, and check anonymously (no credentials) that the release is public and not a draft.
+
+Credentials: a GitHub App (`sprydynamics-nastro-sync`, installed on this one repository only, permissions
+`contents`/`issues`/`pull_requests` write) mints a short-lived installation token. Its private key lives only in Key
+Vault; the signing identity's federated service connection has *Key Vault Secrets User* on that one secret.
+
+The `githubRelease` pipeline parameter is `auto` (publish on `v*` tags), `dry-run` or `off`. **`dry-run`** performs
+steps 1-4 against a throwaway tag, then deletes the draft and the tag and confirms they are gone; run it after any
+change to the pipeline or to `eng/release-to-github.ps1`:
+
+```
+az pipelines run --id 3 --branch main --parameters githubRelease=dry-run --organization https://dev.azure.com/sprydynamics --project oss-tools
+```
+
+## Issues and pull requests
+
+Issues and PRs are enabled on the public GitHub repository and are synced with Azure DevOps Boards by a separate
+service, `github-ado-sync` (an Azure Function in the `oss-tools` project; see that repository's README for its design,
+security model and operation). In short:
+
+- GitHub issues and PRs become work items (tagged `from-github`, `gh-<n>` / `gh-pr-<n>`); comments, labels and open/closed
+  state follow.
+- Azure DevOps is private. Only work items that began as GitHub issues, or are tagged `public`, are ever visible on
+  GitHub, and only comments that **start with `/public`** are published. Everything else stays internal.
+- PRs are one-way (GitHub -> Boards). They are not merged on GitHub; a maintainer ports the change, credits the
+  author, and closes the PR.
+- Pause the whole thing by setting `SYNC_ENABLED` to anything other than `true` on the Function app.
+
+The main branch has a GitHub *ruleset* that blocks direct pushes, force pushes and deletion, so that the mirror
+pipeline (the deploy key) is the only writer.
 ## Not done
 
-- No GitHub *release* (binaries are not attached there); the `release` pipeline artifact
-  in Azure DevOps is the distribution point.
 - No ARM/aarch64 builds and no macOS (out of scope for this port).
 - No installer (MSI/winget/deb); the archives are portable.

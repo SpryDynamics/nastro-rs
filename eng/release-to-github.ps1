@@ -184,7 +184,11 @@ finally {
         & gh api -X DELETE "repos/$Repo/git/refs/tags/$Tag" 2>&1 | Out-Null
         & git -C $root tag -d $Tag 2>&1 | Out-Null
         & gh api "repos/$Repo/git/ref/tags/$Tag" 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) { Write-Warning "Throwaway tag $Tag is still on GitHub - delete it by hand." } else { Write-Host "   confirmed gone from GitHub" }
+        $stillThere = ($LASTEXITCODE -eq 0)
+        # This lookup is EXPECTED to fail (404 = the tag is gone). Reset the exit code so that success
+        # is not reported as a failure by hosts, such as AzureCLI@2, that exit with the last native code.
+        $global:LASTEXITCODE = 0
+        if ($stillThere) { Write-Warning "Throwaway tag $Tag is still on GitHub - delete it by hand." } else { Write-Host "   confirmed gone from GitHub" }
     }
     elseif ($releaseCreated -and -not $?) {
         Write-Warning "The draft release for $Tag was left in place for inspection."

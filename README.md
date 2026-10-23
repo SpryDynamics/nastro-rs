@@ -124,6 +124,10 @@ silent fall back to defaults. Otherwise config is read from `%APPDATA%\nastro\co
 available keys. A missing config file is not an error - sane defaults apply
 (`~/Recordings/nastro`, `large-v3-turbo`, etc.).
 
+## Contributing
+
+Issues and pull requests are welcome; please read [CONTRIBUTING.md](CONTRIBUTING.md) first (this repository is a mirror,
+so PRs are ported by hand). Report security problems privately, see [SECURITY.md](SECURITY.md).
 ## License
 
 MIT, see [`LICENSE`](LICENSE). This is an independent reimplementation (see
