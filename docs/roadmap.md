@@ -74,7 +74,8 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
 - The shipped archives are verified, not just built: signatures checked on the
   extracted binaries, the Linux tarball smoke-tested (`ldd`, checksum), and both
   downloaded and run on real machines.
-- Not done: GitHub mirror/release, aarch64, installers (MSI/winget/deb).
+- One-way read-only GitHub mirror (SpryDynamics/nastro-rs) via a repo-scoped deploy key.
+- Not done: GitHub releases, aarch64, installers (MSI/winget/deb).
 
 ## Phase 7 - Transcription (deferred)
 - `nastro-transcribe` crate wrapping `whisper-rs` (vendored whisper.cpp), ggml model

@@ -75,9 +75,34 @@ az role assignment create --assignee-object-id <spObjectId> --assignee-principal
 az ad app federated-credential create --id <appObjectId> --parameters cred.json
 ```
 
+## GitHub mirror
+
+`https://github.com/SpryDynamics/nastro-rs` is a **read-only, one-way mirror**; Azure
+DevOps is the source of truth. The `nastro-rs-mirror` pipeline
+(`azure-pipelines-mirror.yml`) runs on pushes to `main` and on `v*` tags and publishes
+only those - never other branches. Pushes are fast-forward only, so if GitHub ever
+diverges the pipeline fails instead of overwriting. Issues and the wiki are disabled on
+the GitHub repo; contributions go through Azure DevOps.
+
+- Credential: a GitHub **deploy key** with write access to that one repository only
+  (not a personal token, so it can't reach anything else). The private half lives only as
+  the masked secret pipeline variable `MIRROR_DEPLOY_KEY_B64`.
+- GitHub's SSH host key is pinned in the pipeline from `https://api.github.com/meta`.
+- To rotate: generate a new passphrase-free ed25519 key, replace the deploy key on the
+  GitHub repo (Settings > Deploy keys), and update the pipeline variable with
+  `base64` of the new private key. (`ssh-keygen -N ""` - quoting it as `'""'` on Windows
+  sets a literal two-character passphrase and the pipeline will fail at "Install deploy
+  key".)
+- Commits show as *Unverified* on GitHub: they are SSH-signed, but GitHub doesn't know the
+  signing key. Add the public key from `~/.ssh/allowed_signers` as a *Signing key* on the
+  account that should vouch for them.
+- Everything in the history is public, including the committer email
+  `tfitts@sprydynamics.com` and the signing Entra app's client ID in this file (an
+  identifier, not a credential; the app has no secrets).
+
 ## Not done
 
-- No GitHub release or mirror yet; ADO is the only home, and the `release` pipeline
-  artifact is the distribution point.
+- No GitHub *release* (binaries are not attached there); the `release` pipeline artifact
+  in Azure DevOps is the distribution point.
 - No ARM/aarch64 builds and no macOS (out of scope for this port).
 - No installer (MSI/winget/deb); the archives are portable.

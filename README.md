@@ -53,6 +53,9 @@ bin/
   nastro-tap/      capture helper (spawned by nastro, talks over stdio)
 ```
 
+> This GitHub repository is a read-only mirror of the Azure DevOps source of truth; see
+> [`docs/releasing.md`](docs/releasing.md#github-mirror).
+
 ## Install
 
 Download a release archive (see [`docs/releasing.md`](docs/releasing.md)), check it
