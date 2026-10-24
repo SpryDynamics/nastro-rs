@@ -6,6 +6,11 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-24
+
+First release (pre-release: the project is 0.x). Recording, browsing and on-device transcription on Windows and Linux,
+plus optional speaker labels.
+
 ### Added (Phase 7 - transcription)
 
 - **`nastro transcribe <id|last>`** and the TUI's **`t`** key: on-device speech-to-text, written as `transcript.txt`
