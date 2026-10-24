@@ -88,7 +88,7 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
   real TUI in a pseudo-terminal; default model `large-v3-turbo` measured at ~2x real time on a 16-core CPU.
 - Speaker labels: the original's `whisperx` backend, as an optional external tool (`transcriber = "whisperx"`): installed with
   `uv` on request, run as a subprocess, parsed into `[SPEAKER_00]`-labelled `txt`/`srt`; token via environment only; cancel kills
-  the whole process tree. Verified against the real tool up to (not including) the speaker step, which needs a Hugging Face token.
+  the whole process tree. Verified end to end against the real tool, including the speaker step: a synthetic two-voice, eight-turn conversation (53 s, `small` model, Windows) came back with every turn attributed to the right speaker.
 - Not done / next:
   - GPU acceleration (Vulkan, which would also cover AMD/Intel): needs a decision on how to ship a binary that still
     starts on machines without a Vulkan loader.

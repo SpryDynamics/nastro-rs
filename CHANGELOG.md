@@ -51,9 +51,10 @@ to [Semantic Versioning](https://semver.org/).
   terms accepted (403)**, told apart from Hugging Face's real error text; unusable model names; missing data.
 - Tests: a stand-in `whisperx` (`nastro-fake-whisperx`, never shipped) covers the whole integration in CI on both OSes;
   mutation checks confirmed the token-in-argv and process-tree guarantees are really tested. Against the **real** WhisperX
-  (opt-in: `NASTRO_TEST_REAL_WHISPERX=1`) everything up to the speaker step is verified, including the real tool's output
-  format, stage markers, automatic NLTK repair and that cancelling leaves no Python running. The speaker step itself needs
-  a token (`NASTRO_TEST_HF_TOKEN`, `NASTRO_TEST_DIALOGUE`).
+  (opt-in: `NASTRO_TEST_REAL_WHISPERX=1`) the output format, stage markers, automatic NLTK repair and that cancelling
+  leaves no Python running are verified. The speaker step needs a token (`NASTRO_TEST_HF_TOKEN`, `NASTRO_TEST_DIALOGUE`);
+  it was verified by hand on Windows with a two-voice, eight-turn synthetic conversation (every turn labelled correctly,
+  `--speakers 2`, `small` model). Linux and real human recordings (overlap, noise, more than two voices) are not yet checked.
 ### Changed
 
 - The `transcriber` config value is now `whisper` (the built-in engine). `whisper-cli` is accepted as an alias;
