@@ -14,8 +14,8 @@ transcription) - retargeted from **macOS-only** to **Windows + Linux**.
 > silence was observed, so audio *content* and a native PipeWire/PulseAudio
 > desktop are still unverified. Recordings are AAC/.m4a (fragmented MP4, so
 > they survive a crash) via an external `ffmpeg`. Transcription is verified on
-> Windows and Linux (real model, real speech); speaker labels (`whisperx`) are not
-> implemented. See
+> Windows and Linux (real model, real speech). Speaker labels (`[SPEAKER_00]`) are
+> available through the optional external WhisperX tool. See
 > [`CHANGELOG.md`](CHANGELOG.md) for exact scope and [`docs/`](docs/) for the
 > phased build plan.
 
@@ -34,7 +34,7 @@ replacing every macOS-specific piece with a Windows/Linux-native equivalent:
 | System audio capture | CoreAudio process tap | WASAPI loopback (Windows) / PulseAudio monitor source (Linux) |
 | Audio container | AVAudioFile → AAC/.m4a | `ffmpeg` subprocess, fragmented MP4 for crash safety |
 | Resample for transcription | `afconvert` | `ffmpeg` subprocess (reuses the muxing dependency) |
-| Transcription | shells out to Homebrew-installed `whisper-cli`/`whisperx` | embedded `whisper-rs` (whisper.cpp) - no external installer |
+| Transcription | shells out to Homebrew-installed `whisper-cli`/`whisperx` | embedded `whisper-rs` (whisper.cpp) - no external installer; `whisperx` kept as an optional external tool for speaker labels |
 | Anti-sleep | `caffeinate` | `SetThreadExecutionState` (Windows) / best-effort `systemd-inhibit` (Linux) |
 | Trash on delete | `~/.Trash` | `trash` crate (Recycle Bin / freedesktop trash spec) |
 | TUI | Bubble Tea (Go) | `ratatui` |
@@ -173,7 +173,42 @@ download it works offline.
   run leaves any existing transcript untouched.
 - A recording that is still being recorded cannot be transcribed; silence gives an empty
   transcript rather than invented words.
-- `transcriber = "whisperx"` (speaker labels) is not implemented in this port.
+
+### Speaker labels (WhisperX)
+
+To get `[SPEAKER_00]` / `[SPEAKER_01]` labels (who said what), use the optional WhisperX engine:
+
+```powershell
+nastro transcribe --setup-whisperx                       # one time: installs WhisperX (with uv) and its data
+nastro transcribe last --transcriber whisperx            # or set  transcriber = "whisperx"  in the config
+nastro transcribe last --transcriber whisperx --speakers 2   # telling it how many people helps
+```
+
+```
+[SPEAKER_00] Good morning everyone. Let's start the weekly planning meeting.
+[SPEAKER_01] Thanks. The new release is on track.
+```
+
+`transcript.txt` has one line per run of consecutive same-speaker phrases, and `transcript.srt` the same with timestamps.
+In the TUI, `t` uses whichever engine the `transcriber` setting selects.
+
+It is heavier than the built-in engine, which is why it is optional:
+
+- **A Hugging Face account.** The speaker models are *gated*: create a free **read** token at
+  <https://huggingface.co/settings/tokens>, accept the terms on
+  <https://huggingface.co/pyannote/speaker-diarization-community-1>, and put the token in the config
+  (`hf_token = "hf_..."`) or the `HF_TOKEN` environment variable. The token is handed to WhisperX through its
+  environment only (never on a command line, where other users could see it) and is scrubbed from any error text.
+  Treat the config file like any file holding a credential; the environment variable avoids storing it at all.
+- **About 2 GB to install** (Python, PyTorch, pyannote) plus several GB of models downloaded on first use, into
+  your Hugging Face cache. It installs for your user only, via [`uv`](https://docs.astral.sh/uv/)
+  (`winget install astral-sh.uv`); `--setup-whisperx` asks nothing else and does it for you.
+- **CPU only and slow**: a multiple of the recording length with the default model; it shows which stage it is in
+  (detecting speech, transcribing, aligning, identifying speakers) because WhisperX reports no percentage. Use a
+  smaller `--model` (`small`, `base`) for speed.
+- `whisper_model` must be a plain model name here (`small`, `large-v3-turbo`, ...), not a file path; quantised ggml
+  names such as `base-q5_1` map to the full model. WhisperX fetches its own copy.
+- Cancelling stops WhisperX and everything it started, and leaves any existing transcript untouched.
 
 ### Config
 
@@ -183,8 +218,9 @@ silent fall back to defaults. Otherwise config is read from `%APPDATA%\nastro\co
 `~/.config/nastro/config.toml` (Linux); see `nastro-config`'s `ConfigFile` for the
 available keys. A missing config file is not an error - sane defaults apply
 (`~/Recordings/nastro`, `large-v3-turbo`, etc.). The transcription keys are `whisper_model`
-(a model name or path), `lang` (`auto` or a code such as `en`), `transcriber` (`whisper`) and
-`max_parallel_transcriptions` (how many the TUI runs at once; default 2).
+(a model name or path), `lang` (`auto` or a code such as `en`), `transcriber` (`whisper`, or `whisperx` for speaker
+labels), `hf_token` (for `whisperx`; or `HF_TOKEN`) and `max_parallel_transcriptions` (how many the TUI runs at
+once; default 2).
 
 ## Contributing
 

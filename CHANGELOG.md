@@ -30,10 +30,34 @@ to [Semantic Versioning](https://semver.org/).
 - Licensing: whisper.cpp/ggml attribution added to `NOTICE.md`; `CDLA-Permissive-2.0` (the CA-list data in
   `webpki-roots`, used for the model download's TLS) added to the `cargo-deny` and `cargo-about` allow-lists.
 
+### Added (speaker labels via WhisperX)
+
+- **`transcriber = "whisperx"`** (or `nastro transcribe --transcriber whisperx`): speaker identification. nastro runs the
+  external [WhisperX](https://github.com/m-bain/whisperX) tool and writes the same `transcript.txt` / `transcript.srt`
+  with `[SPEAKER_00]` labels, merging consecutive phrases by the same speaker. `--speakers N` (or `--min-speakers` /
+  `--max-speakers`) tells it how many people to expect. It is optional because it needs a Hugging Face account (the
+  pyannote speaker models are gated) and about 2 GB for Python/PyTorch.
+- **`nastro transcribe --setup-whisperx`** installs WhisperX with `uv` (user-level, pinned to Python 3.12) and fetches
+  the NLTK `punkt_tab` data a fresh install lacks (without it WhisperX 3.8.6 crashes minutes in, at alignment). The same
+  data check runs automatically before every run. Nothing is installed without being asked: the CLI offers (`--yes` to
+  accept), the TUI only reports what is missing.
+- The Hugging Face token reaches WhisperX only through its **environment** (never argv, which other local users can
+  read), is never printed, and is scrubbed from anything echoed back in an error; `Options`'s `Debug` output redacts it.
+- WhisperX has no percentage, so the CLI and TUI show its **stage** (detecting speech, transcribing, aligning words,
+  identifying speakers).
+- **Cancelling** (Ctrl+C / `c`) kills WhisperX *and everything it started*, on Windows with `taskkill /T` and on Unix by
+  signalling the process group, and removes its temporary folder; an existing transcript is never touched.
+- Errors say what to do: no WhisperX / no token / **a rejected token (HTTP 401) versus valid token without the model
+  terms accepted (403)**, told apart from Hugging Face's real error text; unusable model names; missing data.
+- Tests: a stand-in `whisperx` (`nastro-fake-whisperx`, never shipped) covers the whole integration in CI on both OSes;
+  mutation checks confirmed the token-in-argv and process-tree guarantees are really tested. Against the **real** WhisperX
+  (opt-in: `NASTRO_TEST_REAL_WHISPERX=1`) everything up to the speaker step is verified, including the real tool's output
+  format, stage markers, automatic NLTK repair and that cancelling leaves no Python running. The speaker step itself needs
+  a token (`NASTRO_TEST_HF_TOKEN`, `NASTRO_TEST_DIALOGUE`).
 ### Changed
 
-- The `transcriber` config value is now `whisper` (the built-in engine). `whisper-cli` is accepted as an alias.
-  `whisperx` (speaker labels) is reported as unavailable instead of silently ignored.
+- The `transcriber` config value is now `whisper` (the built-in engine). `whisper-cli` is accepted as an alias;
+  `whisperx` selects speaker labels.
 - `nastro` is now about 4.7 MB (was under 1 MB) because it contains the speech engine.
 - Building from source needs CMake, a C++ compiler and libclang (see the README).
 

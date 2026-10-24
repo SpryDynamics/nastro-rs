@@ -188,9 +188,10 @@ fn start_transcription(
 ) {
     use nastro_transcribe::{engine, models};
 
-    if let Err(e) = nastro_transcribe::check_transcriber(&config.transcriber) {
-        return app.on_action_error(&e.to_string());
-    }
+    let backend = match nastro_transcribe::check_transcriber(&config.transcriber) {
+        Ok(b) => b,
+        Err(e) => return app.on_action_error(&one_line(&e)),
+    };
 
     let newest = app.records.iter().map(|r| r.dir_name.as_str()).max();
     if nastro_transcribe::recording_in_progress(
@@ -205,7 +206,25 @@ fn start_transcription(
     let mut options = nastro_transcribe::Options::from_config(config);
     options.overwrite = overwrite;
     if let Err(e) = engine::resolve_language(&options.model, &options.lang) {
-        return app.on_action_error(&e.to_string());
+        return app.on_action_error(&one_line(&e));
+    }
+
+    // Speaker identification (WhisperX) fetches its own models and has its own prerequisites; nothing here is
+    // downloaded without the user, so just report what is missing. (`nastro transcribe --setup-whisperx` fixes it.)
+    if backend == nastro_transcribe::Backend::WhisperX {
+        if let Err(e) = nastro_transcribe::whisperx::model_name(&options.model) {
+            return app.on_action_error(&one_line(&e));
+        }
+        if options.hf_token.is_none() {
+            return app.on_action_error(&one_line(&nastro_transcribe::Error::HfTokenMissing));
+        }
+        if nastro_transcribe::whisperx::locate().is_none() {
+            return app.on_action_error(&one_line(&nastro_transcribe::Error::WhisperxMissing {
+                searched: "PATH and ~/.local/bin".into(),
+            }));
+        }
+        let state = jobs.submit(dir_name.clone(), path, options);
+        return app.on_transcribe_state(&dir_name, state);
     }
 
     if !models::is_path(&options.model) && !models::is_installed(&options.model) {
@@ -226,6 +245,25 @@ fn start_transcription(
 
     let state = jobs.submit(dir_name.clone(), path, options);
     app.on_transcribe_state(&dir_name, state);
+}
+
+/// An error message on a single line, for the status bar: multi-line guidance is joined, and the longest
+/// messages (a failing tool's output) are cut. The full text is what `nastro transcribe` prints.
+fn one_line(e: &nastro_transcribe::Error) -> String {
+    const MAX: usize = 220;
+    let flat = e
+        .to_string()
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if flat.chars().count() <= MAX {
+        flat
+    } else {
+        let cut: String = flat.chars().take(MAX).collect();
+        format!("{cut}... (run `nastro transcribe` for the full message)")
+    }
 }
 
 /// Applies one report from a background job to the UI.
@@ -259,8 +297,40 @@ fn handle_job_msg(msg: JobMsg, config: &Config, app: &mut App) -> io::Result<()>
                 }
             }
             Err(nastro_transcribe::Error::Cancelled) => app.on_transcribe_cancelled(&dir_name),
-            Err(e) => app.on_transcribe_failed(&dir_name, &e.to_string()),
+            Err(e) => app.on_transcribe_failed(&dir_name, &one_line(&e)),
         },
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nastro_transcribe::Error;
+
+    #[test]
+    fn multi_line_guidance_becomes_one_status_line() {
+        let s = one_line(&Error::HfTokenMissing);
+        assert!(!s.contains('\n'), "{s}");
+        assert!(
+            s.contains("Hugging Face") && s.contains("huggingface.co/settings/tokens"),
+            "{s}"
+        );
+    }
+
+    #[test]
+    fn very_long_messages_are_cut_with_a_pointer_to_the_full_text() {
+        let e = Error::WhisperxFailed {
+            status: "exit code: 1".into(),
+            detail: "x".repeat(2000),
+        };
+        let s = one_line(&e);
+        assert!(s.chars().count() < 320, "{}", s.chars().count());
+        assert!(s.contains("nastro transcribe"), "{s}");
+    }
+
+    #[test]
+    fn short_messages_are_left_alone() {
+        assert_eq!(one_line(&Error::Cancelled), "cancelled");
+    }
 }

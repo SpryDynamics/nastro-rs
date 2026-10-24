@@ -58,6 +58,7 @@ pub fn state_of(progress: Progress) -> JobState {
                 .map_or(0, |p| p.min(100) as u8),
         ),
         Progress::Decoding => JobState::Reading,
+        Progress::Phase(phase) => JobState::Working(phase),
         Progress::Transcribing { percent } => JobState::Transcribing(percent.min(100)),
         Progress::Saving => JobState::Saving,
     }
@@ -222,9 +223,7 @@ mod tests {
     fn opts() -> Options {
         Options {
             model: "tiny.en".into(),
-            lang: "auto".into(),
-            threads: None,
-            overwrite: false,
+            ..Options::default()
         }
     }
 

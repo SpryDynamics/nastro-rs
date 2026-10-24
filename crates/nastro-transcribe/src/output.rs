@@ -15,6 +15,52 @@ pub struct Segment {
     pub start_ms: i64,
     pub end_ms: i64,
     pub text: String,
+    /// Who said it (`SPEAKER_00`, ...), when speaker identification ran. `None` for plain transcription.
+    pub speaker: Option<String>,
+}
+
+/// The label for a phrase that speaker identification could not attribute to anyone.
+pub const UNKNOWN_SPEAKER: &str = "SPEAKER_UNKNOWN";
+
+/// Consecutive phrases by the same speaker, merged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Run {
+    pub speaker: String,
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub text: String,
+}
+
+/// `true` if any phrase carries a speaker, i.e. the transcript should be written with speaker labels.
+pub fn has_speakers(segments: &[Segment]) -> bool {
+    segments.iter().any(|s| s.speaker.is_some())
+}
+
+/// Merges consecutive same-speaker phrases (empty ones dropped) into runs, from the first phrase's start to the
+/// last phrase's end. A phrase with no speaker is attributed to [`UNKNOWN_SPEAKER`].
+pub fn runs(segments: &[Segment]) -> Vec<Run> {
+    let mut out: Vec<Run> = Vec::new();
+    for s in segments {
+        let text = clean(&s.text);
+        if text.is_empty() {
+            continue;
+        }
+        let speaker = s.speaker.as_deref().unwrap_or(UNKNOWN_SPEAKER);
+        match out.last_mut() {
+            Some(last) if last.speaker == speaker => {
+                last.end_ms = s.end_ms;
+                last.text.push(' ');
+                last.text.push_str(&text);
+            }
+            _ => out.push(Run {
+                speaker: speaker.to_string(),
+                start_ms: s.start_ms,
+                end_ms: s.end_ms,
+                text,
+            }),
+        }
+    }
+    out
 }
 
 /// Collapses all whitespace (including newlines) to single spaces. A newline inside a cue would end it early
@@ -35,8 +81,14 @@ pub fn srt_time(ms: i64) -> String {
     )
 }
 
-/// Plain text: one segment per line.
+/// Plain text: one segment per line, or, when speakers are known, one `[SPEAKER_00] ...` line per run.
 pub fn to_txt(segments: &[Segment]) -> String {
+    if has_speakers(segments) {
+        return runs(segments)
+            .iter()
+            .map(|r| format!("[{}] {}\n", r.speaker, r.text))
+            .collect();
+    }
     let mut out = String::new();
     for s in segments {
         let text = clean(&s.text);
@@ -48,8 +100,24 @@ pub fn to_txt(segments: &[Segment]) -> String {
     out
 }
 
-/// SubRip: numbered cues with `start --> end` timestamps.
+/// SubRip: numbered cues with `start --> end` timestamps (one per speaker run, prefixed with `[SPEAKER_00]`,
+/// when speakers are known).
 pub fn to_srt(segments: &[Segment]) -> String {
+    if has_speakers(segments) {
+        let mut out = String::new();
+        for (i, r) in runs(segments).iter().enumerate() {
+            let end = r.end_ms.max(r.start_ms + 1);
+            out.push_str(&format!(
+                "{}\n{} --> {}\n[{}] {}\n\n",
+                i + 1,
+                srt_time(r.start_ms),
+                srt_time(end),
+                r.speaker,
+                r.text
+            ));
+        }
+        return out;
+    }
     let mut out = String::new();
     let mut n = 0;
     for s in segments {
@@ -118,6 +186,14 @@ mod tests {
             start_ms: a,
             end_ms: b,
             text: t.into(),
+            speaker: None,
+        }
+    }
+
+    fn said(who: Option<&str>, a: i64, b: i64, t: &str) -> Segment {
+        Segment {
+            speaker: who.map(String::from),
+            ..seg(a, b, t)
         }
     }
 
@@ -153,6 +229,74 @@ mod tests {
             out,
             "1\n00:00:00,000 --> 00:00:01,500\nFirst\n\n2\n00:00:02,000 --> 00:00:03,000\na b\n\n"
         );
+    }
+
+    // ----- speaker labels
+
+    #[test]
+    fn plain_transcripts_are_unchanged_when_no_speaker_is_known() {
+        let segs = [seg(0, 1000, "Hello"), seg(1000, 2000, "there")];
+        assert!(!has_speakers(&segs));
+        assert_eq!(to_txt(&segs), "Hello\nthere\n");
+        assert!(!to_srt(&segs).contains('['));
+    }
+
+    #[test]
+    fn consecutive_segments_by_one_speaker_merge_into_one_labelled_line() {
+        let segs = [
+            said(Some("SPEAKER_00"), 0, 1000, "Good morning."),
+            said(Some("SPEAKER_00"), 1200, 3000, "Let's begin."),
+            said(Some("SPEAKER_01"), 3500, 4000, "Thanks."),
+            said(Some("SPEAKER_00"), 4500, 5000, "Sure."),
+        ];
+        assert!(has_speakers(&segs));
+        assert_eq!(
+            to_txt(&segs),
+            "[SPEAKER_00] Good morning. Let's begin.\n[SPEAKER_01] Thanks.\n[SPEAKER_00] Sure.\n"
+        );
+        let r = runs(&segs);
+        assert_eq!(r.len(), 3);
+        assert_eq!(
+            (r[0].start_ms, r[0].end_ms),
+            (0, 3000),
+            "a run spans first start to last end"
+        );
+    }
+
+    #[test]
+    fn srt_has_one_numbered_cue_per_run_with_the_speaker_prefix() {
+        let segs = [
+            said(Some("SPEAKER_00"), 0, 1000, "One."),
+            said(Some("SPEAKER_00"), 1000, 2000, "Two."),
+            said(Some("SPEAKER_01"), 2500, 3000, "Three."),
+        ];
+        assert_eq!(
+            to_srt(&segs),
+            "1\n00:00:00,000 --> 00:00:02,000\n[SPEAKER_00] One. Two.\n\n2\n00:00:02,500 --> 00:00:03,000\n[SPEAKER_01] Three.\n\n"
+        );
+    }
+
+    #[test]
+    fn an_unattributed_phrase_is_labelled_unknown_once_any_speaker_is_known() {
+        let segs = [
+            said(Some("SPEAKER_00"), 0, 1000, "Known."),
+            said(None, 1000, 2000, "Mystery."),
+        ];
+        assert_eq!(
+            to_txt(&segs),
+            "[SPEAKER_00] Known.\n[SPEAKER_UNKNOWN] Mystery.\n"
+        );
+    }
+
+    #[test]
+    fn empty_phrases_do_not_split_or_create_runs() {
+        let segs = [
+            said(Some("SPEAKER_00"), 0, 1000, "A."),
+            said(Some("SPEAKER_01"), 1000, 1500, "   "),
+            said(Some("SPEAKER_00"), 1500, 2000, "B."),
+        ];
+        assert_eq!(to_txt(&segs), "[SPEAKER_00] A. B.\n");
+        assert_eq!(to_srt(&segs).matches("-->").count(), 1);
     }
 
     #[test]

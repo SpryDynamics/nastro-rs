@@ -55,6 +55,8 @@ pub enum JobState {
     Reading,
     /// Recognising speech, 0..=100.
     Transcribing(u8),
+    /// A speaker-identification (WhisperX) stage. It reports no percentage, only which stage it has reached.
+    Working(nastro_transcribe::Phase),
     Saving,
 }
 
@@ -66,6 +68,14 @@ impl JobState {
             JobState::Downloading(p) => format!("dl {p}%"),
             JobState::Reading => "read".into(),
             JobState::Transcribing(p) => format!("{p}%"),
+            JobState::Working(phase) => match phase {
+                nastro_transcribe::Phase::Preparing => "setup",
+                nastro_transcribe::Phase::DetectingSpeech => "speech",
+                nastro_transcribe::Phase::Transcribing => "text",
+                nastro_transcribe::Phase::Aligning => "align",
+                nastro_transcribe::Phase::Diarizing => "speakers",
+            }
+            .into(),
             JobState::Saving => "save".into(),
         }
     }
@@ -77,6 +87,7 @@ impl JobState {
             JobState::Downloading(p) => format!("downloading the speech model ({p}%)"),
             JobState::Reading => "reading the audio".into(),
             JobState::Transcribing(p) => format!("transcribing ({p}%)"),
+            JobState::Working(phase) => format!("{} (speaker identification)", phase.label()),
             JobState::Saving => "saving".into(),
         }
     }
@@ -1258,6 +1269,28 @@ mod tests {
         a.on_transcribe_cancelled("z");
         assert!(a.jobs.is_empty());
         assert!(a.status.as_ref().unwrap().text.contains("Cancelled"));
+    }
+
+    #[test]
+    fn speaker_identification_stages_have_labels() {
+        use nastro_transcribe::Phase;
+        assert_eq!(JobState::Working(Phase::Diarizing).short(), "speakers");
+        assert_eq!(JobState::Working(Phase::Aligning).short(), "align");
+        assert!(JobState::Working(Phase::Diarizing)
+            .describe()
+            .contains("identifying speakers"));
+        for p in [
+            Phase::Preparing,
+            Phase::DetectingSpeech,
+            Phase::Transcribing,
+            Phase::Aligning,
+            Phase::Diarizing,
+        ] {
+            assert!(
+                JobState::Working(p).short().len() <= 8,
+                "must fit the status column"
+            );
+        }
     }
 
     #[test]

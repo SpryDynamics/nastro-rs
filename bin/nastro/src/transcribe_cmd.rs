@@ -5,12 +5,17 @@ use std::time::Duration;
 
 use anyhow::{bail, Context};
 use nastro_config::Config;
-use nastro_transcribe::{models, CancelToken, Error, Options, Progress};
+use nastro_transcribe::{
+    models, whisperx, Backend, CancelToken, Error, Options, Progress, Speakers,
+};
 
 #[derive(clap::Args)]
 pub struct Args {
     /// Recording id (its directory name), or "last" for the newest.
-    #[arg(required_unless_present = "list_models", value_name = "ID|last")]
+    #[arg(
+        required_unless_present_any = ["list_models", "setup_whisperx"],
+        value_name = "ID|last"
+    )]
     pub id: Option<String>,
 
     /// Replace an existing transcript without asking.
@@ -33,6 +38,27 @@ pub struct Args {
     #[arg(long, value_name = "N")]
     pub threads: Option<usize>,
 
+    /// Engine: `whisper` (built in, fast) or `whisperx` (also labels who is speaking; needs a one-time setup, see
+    /// --setup-whisperx). Overrides `transcriber` in the config.
+    #[arg(long, value_name = "whisper|whisperx")]
+    pub transcriber: Option<String>,
+
+    /// Number of speakers, if you know it (whisperx only; it improves the labels).
+    #[arg(long, value_name = "N", conflicts_with_all = ["min_speakers", "max_speakers"])]
+    pub speakers: Option<u32>,
+
+    /// Fewest speakers to expect (whisperx only).
+    #[arg(long, value_name = "N")]
+    pub min_speakers: Option<u32>,
+
+    /// Most speakers to expect (whisperx only).
+    #[arg(long, value_name = "N")]
+    pub max_speakers: Option<u32>,
+
+    /// Install WhisperX (with `uv`) and fetch its one-off data, then exit.
+    #[arg(long)]
+    pub setup_whisperx: bool,
+
     /// List the models that can be downloaded, and exit.
     #[arg(long)]
     pub list_models: bool,
@@ -48,14 +74,33 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
         );
         return Ok(());
     }
+    if args.setup_whisperx {
+        return setup_whisperx(config);
+    }
     let id = args
         .id
         .as_deref()
-        .expect("clap requires an id unless --list-models");
+        .expect("clap requires an id unless --list-models or --setup-whisperx");
 
-    nastro_transcribe::check_transcriber(&config.transcriber)?;
+    let backend = match &args.transcriber {
+        Some(name) => Backend::from_name(name)?,
+        None => nastro_transcribe::check_transcriber(&config.transcriber)?,
+    };
     if args.threads == Some(0) {
         bail!("--threads must be at least 1");
+    }
+    let speakers = Speakers {
+        min: args.speakers.or(args.min_speakers),
+        max: args.speakers.or(args.max_speakers),
+    };
+    if [speakers.min, speakers.max].contains(&Some(0)) {
+        bail!("the number of speakers must be at least 1");
+    }
+    if speakers.min.zip(speakers.max).is_some_and(|(a, b)| a > b) {
+        bail!("--min-speakers cannot be larger than --max-speakers");
+    }
+    if backend != Backend::WhisperX && speakers != Speakers::default() {
+        bail!("the speaker options only apply to the speaker-labelling engine: add `--transcriber whisperx`");
     }
 
     // Which recording?
@@ -75,6 +120,8 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
     }
 
     let mut options = Options::from_config(config);
+    options.backend = backend;
+    options.speakers = speakers;
     if let Some(model) = &args.model {
         options.model = model.clone();
     }
@@ -112,8 +159,10 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
         }
     }
 
-    // A missing model is a (possibly multi-gigabyte) download: never silently.
-    if !models::is_path(&options.model) && !models::is_installed(&options.model) {
+    if backend == Backend::WhisperX {
+        prepare_whisperx(&options, args.yes)?;
+    } else if !models::is_path(&options.model) && !models::is_installed(&options.model) {
+        // A missing model is a (possibly multi-gigabyte) download: never silently.
         let Some(info) = models::find(&options.model) else {
             return Err(Error::UnknownModel(options.model.clone()).into());
         };
@@ -148,8 +197,13 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
             if out.segments == 0 {
                 outln!("No speech was detected; wrote an empty transcript.");
             } else {
+                let who = match out.speakers {
+                    0 => String::new(),
+                    1 => ", 1 speaker".to_string(),
+                    n => format!(", {n} speakers"),
+                };
                 outln!(
-                    "Transcribed {} of audio in {} (language: {}, {} segments).",
+                    "Transcribed {} of audio in {} (language: {}, {} segments{who}).",
                     nastro_records::format_duration(out.audio_seconds),
                     format_elapsed(out.elapsed),
                     out.language,
@@ -178,6 +232,69 @@ pub fn run(config: &Config, args: Args) -> anyhow::Result<()> {
         }
         Err(e) => Err(e.into()),
     }
+}
+
+/// Everything WhisperX needs that can be settled before the long run: a valid model name, a Hugging Face token, and
+/// the program itself (offered for install, with consent, when it is missing).
+fn prepare_whisperx(options: &Options, assume_yes: bool) -> anyhow::Result<()> {
+    whisperx::model_name(&options.model)?;
+    // The token first: there is no point offering a two-gigabyte install to someone who cannot then use it.
+    if options.diarize && options.hf_token.is_none() {
+        return Err(Error::HfTokenMissing.into());
+    }
+    if whisperx::locate().is_none() {
+        let missing = Error::WhisperxMissing {
+            searched: "PATH and ~/.local/bin".into(),
+        };
+        if whisperx::locate_uv().is_none() {
+            return Err(missing.into());
+        }
+        let prompt = "WhisperX (speaker labels) is not installed. Install it now with uv?\nIt is about 2 GB, and installs only for your user. [y/N] ";
+        if !confirm(prompt, assume_yes) {
+            return Err(missing.into());
+        }
+        run_install()?;
+    }
+    eprintln!(
+        "note: speaker identification downloads its speech and speaker models the first time (several GB) and runs\non the CPU, so it is much slower than plain transcription."
+    );
+    Ok(())
+}
+
+/// Installs WhisperX, streaming the installer's output, with Ctrl+C to cancel.
+fn run_install() -> anyhow::Result<()> {
+    let cancel = CancelToken::new();
+    {
+        let c = cancel.clone();
+        // A handler may already exist in this process; the first one is enough.
+        let _ = ctrlc::set_handler(move || c.cancel());
+    }
+    match whisperx::install(&mut |line| eprintln!("{line}"), &cancel) {
+        Ok(()) => Ok(()),
+        Err(Error::Cancelled) => {
+            eprintln!("Cancelled.");
+            std::process::exit(130);
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// `nastro transcribe --setup-whisperx`.
+fn setup_whisperx(config: &Config) -> anyhow::Result<()> {
+    run_install()?;
+    outln!("WhisperX is installed.");
+    if Options::from_config(config).hf_token.is_none() {
+        outln!();
+        outln!("One more step before it can label speakers:");
+        outln!("  1. Create a free *read* token at https://huggingface.co/settings/tokens");
+        outln!("  2. Accept the model terms at https://huggingface.co/pyannote/speaker-diarization-community-1");
+        outln!(
+            "  3. Put the token in the config file as `hf_token = \"hf_...\"` (or set HF_TOKEN)"
+        );
+    }
+    outln!();
+    outln!("Then: nastro transcribe last --transcriber whisperx   (or set `transcriber = \"whisperx\"`)");
+    Ok(())
 }
 
 fn print_models(selected: &str) {
@@ -246,6 +363,13 @@ fn render(p: Progress, model: &str) -> String {
             )
         }
         Progress::Decoding => "Reading audio...".to_string(),
+        Progress::Phase(p) => {
+            let mut label = p.label().to_string();
+            if let Some(first) = label.get_mut(..1) {
+                first.make_ascii_uppercase();
+            }
+            format!("{label}...")
+        }
         Progress::Transcribing { percent } => format!("Transcribing: {percent}%"),
         Progress::Saving => "Saving...".to_string(),
     }
@@ -259,6 +383,7 @@ fn plain_key(p: Progress) -> (u8, u64) {
             (0, (done * 10).checked_div(total).unwrap_or(0))
         }
         Progress::Decoding => (1, 0),
+        Progress::Phase(p) => (4, p as u64),
         Progress::Transcribing { percent } => (2, u64::from(percent) / 10),
         Progress::Saving => (3, 0),
     }

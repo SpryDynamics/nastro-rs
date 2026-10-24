@@ -24,6 +24,12 @@ chose. If a future release of this project ever *ships* an FFmpeg binary alongsi
 `nastro`, that release must also carry FFmpeg's license text, its corresponding
 source offer, and a note of the exact build configuration.
 
+**WhisperX** (<https://github.com/m-bain/whisperX>, BSD-2-Clause), optional, for speaker labels. `nastro` runs it as a
+separate program when `transcriber = "whisperx"` is set. It is **not** bundled, linked or redistributed: it is installed
+on request by the user's own `uv` into their own profile. It in turn uses PyTorch, pyannote.audio and faster-whisper, and
+downloads models from Hugging Face on first use: notably `pyannote/speaker-diarization-community-1` (CC-BY-4.0, gated: the
+user accepts its terms with their own Hugging Face account) and a wav2vec2 alignment model. Their licenses and terms apply
+to whoever installs and uses them, not to nastro's code.
 ## Libraries linked dynamically
 
 The Linux build links the PulseAudio client libraries (`libpulse`, `libpulse-simple`;

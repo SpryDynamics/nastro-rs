@@ -448,17 +448,37 @@ fn t_asks_before_downloading_a_missing_model_and_declining_downloads_nothing() {
 }
 
 #[test]
-fn an_unsupported_transcriber_is_explained_in_the_status_bar() {
+fn an_unknown_transcriber_is_explained_in_the_status_bar() {
     let tmp = tempfile::tempdir().unwrap();
-    let config = seed_with(tmp.path(), "transcriber = 'whisperx'\n");
+    let config = seed_with(tmp.path(), "transcriber = 'deepgram'\n");
     let mut t = Term::launch(&config);
 
     t.wait_for("3 recordings");
     t.send(b"j");
     t.send(b"t");
-    t.wait_for("whisperx");
+    t.wait_for("deepgram");
     t.send(b"q");
     assert!(t.wait_exit());
+}
+
+#[test]
+fn speaker_labels_without_a_token_explain_how_to_get_one() {
+    let tmp = tempfile::tempdir().unwrap();
+    let config = seed_with(tmp.path(), "transcriber = 'whisperx'\n");
+    let mut t = Term::launch_with(&config, &[], &[]);
+
+    t.wait_for("3 recordings");
+    t.send(b"j");
+    t.send(b"t");
+    t.wait_for("Hugging Face");
+    assert!(
+        !tmp.path()
+            .join("recordings/2026-10-21-1000-planning/transcript.txt")
+            .exists(),
+        "nothing may have started"
+    );
+    t.send(b"q");
+    assert!(t.wait_exit(), "no job is running, so q quits straight away");
 }
 
 fn ffmpeg_program() -> std::ffi::OsString {
@@ -545,6 +565,89 @@ fn t_transcribes_in_the_background_and_the_transcript_appears() {
     t.wait_for("your country");
 
     // Wait for the screen to change between Esc and q: sent together, a Unix terminal reads them as Alt+q.
+    t.send(b"\x1b");
+    t.wait_until("return to list", |c| !c.contains("Transcript preview"));
+    t.send(b"q");
+    assert!(t.wait_exit());
+}
+
+/// The stand-in `whisperx` built by `nastro-transcribe`, if this run built it (a workspace test run does; a run of
+/// only this package may not).
+fn fake_whisperx() -> Option<PathBuf> {
+    let exe = Path::new(env!("CARGO_BIN_EXE_nastro"));
+    let name = if cfg!(windows) {
+        "nastro-fake-whisperx.exe"
+    } else {
+        "nastro-fake-whisperx"
+    };
+    let p = exe.parent()?.join(name);
+    p.is_file().then_some(p)
+}
+
+/// Speaker labels through the real TUI: `t` runs the (stand-in) WhisperX in the background and the labelled
+/// transcript appears. Needs ffmpeg; skipped without the stand-in unless `NASTRO_REQUIRE_WHISPER` is set.
+#[test]
+fn t_with_speaker_labels_runs_whisperx_in_the_background() {
+    let require = std::env::var_os("NASTRO_REQUIRE_WHISPER").is_some();
+    let Some(fake) = fake_whisperx() else {
+        assert!(
+            !require,
+            "NASTRO_REQUIRE_WHISPER is set but nastro-fake-whisperx was not built"
+        );
+        eprintln!("skipping: nastro-fake-whisperx not built (run `cargo test --workspace`)");
+        return;
+    };
+    if !ffmpeg_ok() {
+        assert!(
+            !require,
+            "NASTRO_REQUIRE_WHISPER is set but ffmpeg is missing"
+        );
+        eprintln!("skipping: ffmpeg is not installed");
+        return;
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let config = seed_with(
+        tmp.path(),
+        "transcriber = 'whisperx'\nhf_token = 'hf_notarealtokenjustatestvalue0'\nwhisper_model = 'small'\nlang = 'en'\n",
+    );
+    let name = "2026-10-23-0900-meeting";
+    let dir = tmp.path().join("recordings").join(name);
+    std::fs::create_dir_all(&dir).unwrap();
+    let status = std::process::Command::new(ffmpeg_program())
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=16000:cl=mono",
+            "-t",
+            "2",
+        ])
+        .args(["-ac", "1", "-c:a", "aac", "-b:a", "64k", "-y"])
+        .arg(dir.join("audio.m4a"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+    std::fs::write(dir.join("metadata.json"), r#"{"duration_seconds": 2.0}"#).unwrap();
+
+    let mut t = Term::launch_with(&config, &[], &[("NASTRO_WHISPERX", fake.as_path())]);
+    t.wait_for("4 recordings");
+    t.send(b"t"); // the newest recording is selected
+    t.wait_for(&format!("Transcribed {name}"));
+
+    let txt = std::fs::read_to_string(dir.join("transcript.txt")).unwrap();
+    assert!(
+        txt.starts_with("[SPEAKER_00] Good morning everyone."),
+        "{txt:?}"
+    );
+    assert!(txt.contains("[SPEAKER_01] Thanks."), "{txt:?}");
+    t.send(b"\r");
+    t.wait_for("Transcript preview");
+    t.wait_for("[SPEAKER_00]");
+
     t.send(b"\x1b");
     t.wait_until("return to list", |c| !c.contains("Transcript preview"));
     t.send(b"q");

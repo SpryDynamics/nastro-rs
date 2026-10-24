@@ -240,7 +240,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
             Constraint::Fill(1),
             Constraint::Length(9),
             Constraint::Length(10),
-            Constraint::Length(7),
+            Constraint::Length(9),
         ],
     )
     .header(Row::new(vec!["NAME", "LENGTH", "SIZE", "T"]).style(DIM))

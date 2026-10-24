@@ -86,11 +86,13 @@ Phased build plan (see `CHANGELOG.md` for what's actually landed so far).
   background jobs (progress, queue, cancel, confirmations).
 - Verified with real speech and a real model on Windows and on Linux (Ubuntu 24.04 under WSL2), including through the
   real TUI in a pseudo-terminal; default model `large-v3-turbo` measured at ~2x real time on a 16-core CPU.
+- Speaker labels: the original's `whisperx` backend, as an optional external tool (`transcriber = "whisperx"`): installed with
+  `uv` on request, run as a subprocess, parsed into `[SPEAKER_00]`-labelled `txt`/`srt`; token via environment only; cancel kills
+  the whole process tree. Verified against the real tool up to (not including) the speaker step, which needs a Hugging Face token.
 - Not done / next:
   - GPU acceleration (Vulkan, which would also cover AMD/Intel): needs a decision on how to ship a binary that still
     starts on machines without a Vulkan loader.
-  - Speaker labels (the original's `whisperx` backend): no clean embeddable Rust equivalent; likely an optional
-    external-process integration.
+  - An embedded (no Python, no account) replacement for WhisperX's speaker identification, e.g. ONNX diarization models.
   - Long recordings are decoded whole into memory (limit 6 hours); chunked streaming would lift that.
   - aarch64 builds (the AVX2 baseline is x86-64 only).
 ## Explicitly out of scope

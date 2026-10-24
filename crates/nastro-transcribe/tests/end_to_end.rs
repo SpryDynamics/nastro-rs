@@ -99,7 +99,7 @@ fn options(model: &str) -> Options {
         model: model.to_string(),
         lang: "auto".into(),
         threads: Some(4),
-        overwrite: false,
+        ..Options::default()
     }
 }
 

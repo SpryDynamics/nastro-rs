@@ -233,6 +233,7 @@ pub fn recognize(
             start_ms: seg.start_timestamp() * 10,
             end_ms: seg.end_timestamp() * 10,
             text: text.to_string(),
+            speaker: None,
         });
     }
 

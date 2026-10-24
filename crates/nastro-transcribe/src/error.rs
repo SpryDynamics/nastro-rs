@@ -62,14 +62,45 @@ pub enum Error {
     EnglishOnlyModel { model: String, lang: String },
 
     #[error(
-        "transcriber {0:?} is not available in the Rust port: speaker labels (whisperx) are not implemented yet. \
-         Set `transcriber = \"whisper\"` in the config file to use the built-in speech recognition"
+        "speaker identification needs WhisperX, which is not installed (looked for `{searched}`).\n\
+         Run `nastro transcribe --setup-whisperx` to install it (needs the `uv` tool: https://docs.astral.sh/uv/), \
+         or install it yourself with `uv tool install whisperx`"
     )]
-    WhisperxUnavailable(String),
+    WhisperxMissing { searched: String },
 
     #[error(
-        "unknown transcriber {0:?} in the config file; the only supported value is \"whisper\""
+        "speaker identification needs a Hugging Face access token.\n\n\
+         1. Create a free *read* token at https://huggingface.co/settings/tokens\n\
+         2. Accept the model terms at https://huggingface.co/pyannote/speaker-diarization-community-1\n\
+         3. Put it in the config file as `hf_token = \"hf_...\"` (or set the HF_TOKEN environment variable)"
     )]
+    HfTokenMissing,
+
+    #[error(
+        "Hugging Face did not accept the access token. Check that `hf_token` (or HF_TOKEN) is a valid *read* token \
+         from https://huggingface.co/settings/tokens"
+    )]
+    HfTokenRejected,
+
+    #[error(
+        "your Hugging Face account has not been granted access to the speaker model yet.\n\
+         Open https://huggingface.co/{repo} while signed in, accept its terms, then try again"
+    )]
+    DiarizationAccess { repo: String },
+
+    #[error("WhisperX cannot use the model {0:?}: it takes a model name (such as `small` or `large-v3-turbo`), not a file path or an unknown name")]
+    WhisperxModel(String),
+
+    #[error("WhisperX is missing something it needs: {0}")]
+    WhisperxSetup(String),
+
+    #[error("WhisperX failed ({status}).\n{detail}")]
+    WhisperxFailed { status: String, detail: String },
+
+    #[error("could not read WhisperX's result: {0}")]
+    WhisperxOutput(String),
+
+    #[error("unknown transcriber {0:?} in the config file; use \"whisper\" or \"whisperx\"")]
     UnknownTranscriber(String),
 
     #[error("speech recognition failed: {0}")]

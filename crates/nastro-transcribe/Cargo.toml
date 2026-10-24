@@ -13,6 +13,9 @@ nastro-config.workspace = true
 nastro-records.workspace = true
 thiserror.workspace = true
 directories.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile = "3"
 sysinfo.workspace = true
 sha2 = "0.11"
 ureq = "3"
@@ -22,5 +25,13 @@ log = "0.4"
 # "safe" callback setters (see the note in engine.rs).
 whisper-rs = { version = "0.16", features = ["log_backend", "raw-api"] }
 
-[dev-dependencies]
-tempfile = "3"
+[target.'cfg(unix)'.dependencies]
+# Cancelling a speaker-identification run must kill the whole process group, not just the launcher.
+nix = { version = "0.29", features = ["signal", "process"] }
+
+# A tiny stand-in for the `whisperx` command, used only by this crate's tests (never shipped).
+[[bin]]
+name = "nastro-fake-whisperx"
+path = "src/bin/fake_whisperx.rs"
+test = false
+doc = false
