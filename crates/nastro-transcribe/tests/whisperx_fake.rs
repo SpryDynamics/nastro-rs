@@ -230,7 +230,10 @@ fn the_token_reaches_whisperx_only_through_its_environment() {
         "the token is visible in argv:\n{argv}"
     );
     assert_eq!(f.token_seen().unwrap(), format!("HF_TOKEN={TOKEN}"));
-    // And the command line is the documented one.
+    // And the command line is the documented one. (The thread count is whatever the library will actually use: it
+    // never exceeds the machine's safe maximum, which on a 2-CPU build agent is 1.)
+    let threads = nastro_transcribe::effective_threads(Some(2)).to_string();
+    let argv_lines: Vec<&str> = argv.lines().collect();
     for want in [
         "--diarize",
         "--language",
@@ -242,11 +245,11 @@ fn the_token_reaches_whisperx_only_through_its_environment() {
         "--compute_type",
         "int8",
         "--threads",
-        "2",
+        threads.as_str(),
         "--output_format",
         "json",
     ] {
-        assert!(argv.lines().any(|l| l == want), "missing {want:?}:\n{argv}");
+        assert!(argv_lines.contains(&want), "missing {want:?}:\n{argv}");
     }
 }
 
