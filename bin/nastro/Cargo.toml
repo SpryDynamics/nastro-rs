@@ -28,3 +28,9 @@ nastro-transcribe.workspace = true
 portable-pty = "0.9"
 vt100 = "0.18"
 tempfile = "3"
+
+# Renders the README's animated demo from the real TUI (see the file's header). Its unit tests run with the rest.
+[[example]]
+name = "render_demo"
+path = "examples/render_demo.rs"
+test = true

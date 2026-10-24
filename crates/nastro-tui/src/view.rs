@@ -1,5 +1,12 @@
-//! Rendering. Only ANSI palette colors are used so the UI inherits the user's
-//! terminal theme.
+//! Rendering. Only the terminal's 16 ANSI colors are used, never fixed RGB values, so the UI inherits whatever theme
+//! the user's terminal has (a Catppuccin or Solarized terminal gets a Catppuccin or Solarized nastro). The roles are:
+//!
+//! * **cyan**: the accent (selection, titles, meters, progress);
+//! * **bright black**: secondary chrome (borders, labels, hints, units);
+//! * **red**: recording and anything destructive or wrong.
+//!
+//! Everything else is the terminal's default foreground. Colors are removed entirely when `NO_COLOR` is set
+//! (<https://no-color.org>) or the terminal is `dumb`; bold, and the `▸` selection marker, still convey structure.
 //!
 //! Note on OSC 8 hyperlinks: the original project wraps file paths in OSC 8
 //! escapes so they are clickable. ratatui draws into a cell buffer and counts every
@@ -13,18 +20,54 @@ use nastro_records::{format_duration, format_size, transcript_preview};
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Block, Clear, Paragraph, Row, Table, TableState, Wrap};
+use ratatui::widgets::{Block, Cell, Clear, Paragraph, Row, Table, TableState, Wrap};
 use ratatui::Frame;
 
 use crate::app::{mode_label, App, Modal, Screen};
 
 const PREVIEW_CHARS: usize = 600;
+/// Width of the help box: the 18-column key column plus the longest description (a test checks nothing is cut off).
+const HELP_WIDTH: u16 = 62;
 const METER_WIDTH: usize = 24;
 /// Quietest level shown on the meter; anything below reads as empty.
 const METER_FLOOR_DB: f32 = -60.0;
 
+/// Secondary chrome.
 const DIM: Style = Style::new().fg(Color::DarkGray);
-const HINT_KEY: Style = Style::new().add_modifier(Modifier::BOLD);
+/// The accent, emphasised.
+const ACCENT: Style = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+/// A key name inside a dialog or the help screen.
+const HINT_KEY: Style = ACCENT;
+/// Recording / destructive / wrong.
+const WARN: Style = Style::new().fg(Color::Red).add_modifier(Modifier::BOLD);
+
+/// Whether to draw in color: not when `NO_COLOR` is set to anything non-empty (the convention), nor on a `dumb`
+/// terminal.
+pub fn colors_enabled() -> bool {
+    use std::sync::OnceLock;
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        let no_color = std::env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty());
+        let dumb = std::env::var("TERM").is_ok_and(|t| t == "dumb");
+        !(no_color || dumb)
+    })
+}
+
+/// Removes every foreground and background color from `buf`, keeping bold/underline/reverse.
+fn strip_colors(buf: &mut ratatui::buffer::Buffer) {
+    for cell in &mut buf.content {
+        cell.fg = Color::Reset;
+        cell.bg = Color::Reset;
+        cell.underline_color = Color::Reset;
+    }
+}
+
+/// A bordered panel with a dim frame and an accent title.
+fn panel(title: &str) -> Block<'static> {
+    Block::bordered()
+        .border_style(DIM)
+        .title(Span::styled(format!(" {title} "), ACCENT))
+}
 
 /// `m:ss`, or `h:mm:ss` from an hour up.
 pub fn format_timer(d: Duration) -> String {
@@ -65,6 +108,18 @@ fn centered(width: u16, height: u16, area: Rect) -> Rect {
 }
 
 pub fn draw(frame: &mut Frame, app: &App) {
+    draw_with(frame, app, colors_enabled());
+}
+
+/// [`draw`] with the color decision made by the caller (tests, and anything that wants to override the environment).
+pub fn draw_with(frame: &mut Frame, app: &App, color: bool) {
+    draw_screen(frame, app);
+    if !color {
+        strip_colors(frame.buffer_mut());
+    }
+}
+
+fn draw_screen(frame: &mut Frame, app: &App) {
     let [title, body, footer] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Min(0),
@@ -93,21 +148,15 @@ pub fn draw(frame: &mut Frame, app: &App) {
 }
 
 fn title_line(app: &App) -> Line<'static> {
-    let mut spans = vec![Span::styled(
-        " nastro ",
-        Style::new().add_modifier(Modifier::REVERSED | Modifier::BOLD),
-    )];
+    let mut spans = vec![Span::styled(" nastro", ACCENT)];
     match app.screen {
-        Screen::Recording => spans.push(Span::styled(
-            "  ● REC",
-            Style::new().fg(Color::Red).add_modifier(Modifier::BOLD),
-        )),
+        Screen::Recording => spans.push(Span::styled("  ● REC", WARN)),
         _ => {
             let n = app.records.len();
-            spans.push(Span::raw(format!(
-                "  {n} recording{}",
-                if n == 1 { "" } else { "s" }
-            )));
+            spans.push(Span::styled(
+                format!("  {n} recording{}", if n == 1 { "" } else { "s" }),
+                DIM,
+            ));
             if !app.filter.is_empty() {
                 spans.push(Span::styled(format!("  filter: {}", app.filter), DIM));
             }
@@ -142,7 +191,7 @@ fn hint(pairs: &[(&str, &str)]) -> Line<'static> {
         if i > 0 {
             spans.push(Span::styled("  ·  ", DIM));
         }
-        spans.push(Span::styled(key.to_string(), HINT_KEY));
+        spans.push(Span::styled(key.to_string(), DIM));
         spans.push(Span::styled(format!(" {what}"), DIM));
     }
     Line::from(spans)
@@ -151,9 +200,9 @@ fn hint(pairs: &[(&str, &str)]) -> Line<'static> {
 fn footer_line(app: &App, width: u16) -> Line<'static> {
     if let Some(status) = &app.status {
         let style = if status.is_error {
-            Style::new().fg(Color::Red)
+            WARN
         } else {
-            Style::new().fg(Color::Green)
+            Style::new().fg(Color::Cyan)
         };
         return Line::from(Span::styled(format!(" {}", status.text), style));
     }
@@ -224,13 +273,13 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
             .map(format_duration)
             .unwrap_or_else(|| "-".into());
         Row::new(vec![
-            r.dir_name.clone(),
-            dur,
-            format_size(r.size_bytes),
+            Cell::new(r.dir_name.clone()),
+            Cell::new(dur),
+            Cell::new(format_size(r.size_bytes)),
             match app.jobs.get(&r.dir_name) {
-                Some(job) => job.short(),
-                None if r.has_transcript => "✓".to_string(),
-                None => String::new(),
+                Some(job) => Cell::new(job.short()).style(ACCENT),
+                None if r.has_transcript => Cell::new("✓"),
+                None => Cell::new("-").style(DIM),
             },
         ])
     });
@@ -244,7 +293,8 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
         ],
     )
     .header(Row::new(vec!["NAME", "LENGTH", "SIZE", "T"]).style(DIM))
-    .row_highlight_style(Style::new().add_modifier(Modifier::REVERSED));
+    .row_highlight_style(ACCENT)
+    .highlight_symbol("▸ ");
 
     let mut state = TableState::default().with_selected(Some(app.selected));
     frame.render_stateful_widget(table, area, &mut state);
@@ -258,11 +308,7 @@ fn draw_form(frame: &mut Frame, app: &App, area: Rect) {
         let on = app.form.mode == m;
         Span::styled(
             format!("{} {}   ", if on { "◉" } else { "○" }, mode_label(m)),
-            if on {
-                Style::new().add_modifier(Modifier::BOLD)
-            } else {
-                DIM
-            },
+            if on { ACCENT } else { DIM },
         )
     };
 
@@ -283,10 +329,7 @@ fn draw_form(frame: &mut Frame, app: &App, area: Rect) {
         Line::raw(""),
         Line::styled("  Leave the name empty for an unnamed recording.", DIM),
     ]);
-    frame.render_widget(
-        Paragraph::new(text).block(Block::bordered().title(" New recording ")),
-        rect,
-    );
+    frame.render_widget(Paragraph::new(text).block(panel("New recording")), rect);
 }
 
 fn draw_recording(frame: &mut Frame, app: &App, area: Rect) {
@@ -299,7 +342,7 @@ fn draw_recording(frame: &mut Frame, app: &App, area: Rect) {
         Line::raw(""),
         Line::from(Span::styled(
             format!("● {}", format_timer(view.elapsed)),
-            Style::new().fg(Color::Red).add_modifier(Modifier::BOLD),
+            WARN,
         ))
         .centered(),
         Line::from(Span::styled(view.dir_name.clone(), DIM)).centered(),
@@ -312,7 +355,7 @@ fn draw_recording(frame: &mut Frame, app: &App, area: Rect) {
         if active {
             Line::from(vec![
                 Span::styled(format!("  {label}  "), DIM),
-                Span::raw(level_bar(level, METER_WIDTH)),
+                Span::styled(level_bar(level, METER_WIDTH), ACCENT),
             ])
         } else {
             Line::from(Span::styled(format!("  {label}  (off)"), DIM))
@@ -331,7 +374,7 @@ fn draw_recording(frame: &mut Frame, app: &App, area: Rect) {
 
     frame.render_widget(
         Paragraph::new(Text::from(lines))
-            .block(Block::bordered().title(" Recording "))
+            .block(panel("Recording"))
             .wrap(Wrap { trim: true }),
         rect,
     );
@@ -370,15 +413,34 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
     ];
     if let Some(p) = &app.preview {
         lines.push(Line::styled("Transcript preview", DIM));
-        lines.push(Line::raw(transcript_preview(p, PREVIEW_CHARS)));
+        // One line per line of the transcript (a `Line` swallows embedded newlines, which glued speakers together).
+        lines.extend(
+            transcript_preview(p, PREVIEW_CHARS)
+                .lines()
+                .map(preview_line),
+        );
     }
 
     frame.render_widget(
         Paragraph::new(Text::from(lines))
-            .block(Block::bordered().title(" Recording "))
+            .block(panel("Recording"))
             .wrap(Wrap { trim: true }),
         area,
     );
+}
+
+/// One line of a transcript preview. A leading `[SPEAKER_00]` label (from speaker identification) gets the accent.
+fn preview_line(line: &str) -> Line<'static> {
+    if let Some((label, text)) = line
+        .strip_prefix('[')
+        .and_then(|rest| rest.split_once("] "))
+    {
+        return Line::from(vec![
+            Span::styled(format!("[{label}]"), ACCENT),
+            Span::raw(format!(" {text}")),
+        ]);
+    }
+    Line::raw(line.to_string())
 }
 
 fn draw_help(frame: &mut Frame, area: Rect) {
@@ -387,11 +449,8 @@ fn draw_help(frame: &mut Frame, area: Rect) {
         ("s / q / ctrl+c", "stop & save (while recording)"),
         ("x", "discard recording (asks first)"),
         ("enter", "open recording details"),
-        (
-            "t",
-            "transcribe in the background (asks before downloading a model)",
-        ),
-        ("c", "cancel the selected recording's transcription"),
+        ("t", "transcribe in the background"),
+        ("c", "cancel its transcription"),
         ("o", "reveal in file manager"),
         ("d", "delete -> Recycle Bin / Trash (asks first)"),
         ("/", "filter by name"),
@@ -407,12 +466,9 @@ fn draw_help(frame: &mut Frame, area: Rect) {
             Span::raw(v),
         ]));
     }
-    let rect = centered(64, rows.len() as u16 + 3, area);
+    let rect = centered(HELP_WIDTH, rows.len() as u16 + 3, area);
     frame.render_widget(Clear, rect);
-    frame.render_widget(
-        Paragraph::new(Text::from(lines)).block(Block::bordered().title(" Keys ")),
-        rect,
-    );
+    frame.render_widget(Paragraph::new(Text::from(lines)).block(panel("Keys")), rect);
 }
 
 fn draw_modal(frame: &mut Frame, modal: &Modal, area: Rect) {
@@ -438,7 +494,13 @@ fn draw_modal(frame: &mut Frame, modal: &Modal, area: Rect) {
             "Transcription is still running. Quit and cancel it?".to_string(),
         ),
     };
-    let rect = centered(60, 6, area);
+    // Tall enough for the wrapped body plus the blank lines, the options row and the border, so a long question (the
+    // model download one) does not push "y yes / any other key cancel" out of its own box.
+    const MODAL_WIDTH: u16 = 60;
+    let body_lines = (body.chars().count() as u16 + 2)
+        .div_ceil(MODAL_WIDTH - 2)
+        .max(1);
+    let rect = centered(MODAL_WIDTH, body_lines + 5, area);
     frame.render_widget(Clear, rect);
     let text = Text::from(vec![
         Line::raw(""),
@@ -560,6 +622,215 @@ mod tests {
         assert!(out.contains("2.0 KB"), "size column");
         assert!(out.contains('✓'), "transcript flag");
         assert!(out.contains("record") && out.contains("quit"));
+    }
+
+    // ----- colors
+
+    /// Renders and returns the buffer, so colors can be inspected.
+    fn buffer_of(app: &App, w: u16, h: u16, color: bool) -> ratatui::buffer::Buffer {
+        let mut term = Terminal::new(TestBackend::new(w, h)).unwrap();
+        term.draw(|f| draw_with(f, app, color)).unwrap();
+        term.backend().buffer().clone()
+    }
+
+    /// The first cell on any row that starts the given text.
+    fn cell_at<'a>(buf: &'a ratatui::buffer::Buffer, text: &str) -> &'a ratatui::buffer::Cell {
+        let w = buf.area.width;
+        for y in 0..buf.area.height {
+            let row: String = (0..w).map(|x| buf[(x, y)].symbol().to_string()).collect();
+            if let Some(i) = row.find(text) {
+                let col = row[..i].chars().count() as u16;
+                return &buf[(col, y)];
+            }
+        }
+        panic!("{text:?} not on screen");
+    }
+
+    #[test]
+    fn the_selected_row_is_cyan_and_bold_with_a_marker_not_reversed() {
+        let buf = buffer_of(&app(), 100, 12, true);
+        let name = cell_at(&buf, "2026-10-22-1430-standup");
+        assert_eq!(name.fg, Color::Cyan);
+        assert!(name.modifier.contains(Modifier::BOLD));
+        assert!(
+            !name.modifier.contains(Modifier::REVERSED),
+            "selection is no longer inverted video"
+        );
+        assert_eq!(
+            cell_at(&buf, "▸").fg,
+            Color::Cyan,
+            "the marker sits next to the selected row"
+        );
+        // Other rows are the terminal's own foreground.
+        assert_eq!(cell_at(&buf, "2026-10-21-1000-planning").fg, Color::Reset);
+    }
+
+    #[test]
+    fn chrome_is_dim_and_the_title_is_the_accent() {
+        let buf = buffer_of(&app(), 100, 12, true);
+        assert_eq!(cell_at(&buf, "nastro").fg, Color::Cyan);
+        assert_eq!(cell_at(&buf, "2 recordings").fg, Color::DarkGray);
+        assert_eq!(cell_at(&buf, "NAME").fg, Color::DarkGray);
+        assert_eq!(
+            cell_at(&buf, "r record").fg,
+            Color::DarkGray,
+            "hint bar is dim"
+        );
+        // The last cell on the untranscribed recording's row is its transcript column: a dim dash.
+        let w = buf.area.width;
+        let y = (0..buf.area.height)
+            .find(|&y| {
+                (0..w)
+                    .map(|x| buf[(x, y)].symbol())
+                    .collect::<String>()
+                    .contains("2026-10-21-1000-planning")
+            })
+            .unwrap();
+        let x = (0..w).rev().find(|&x| buf[(x, y)].symbol() != " ").unwrap();
+        assert_eq!(buf[(x, y)].symbol(), "-");
+        assert_eq!(
+            buf[(x, y)].fg,
+            Color::DarkGray,
+            "no transcript is a dim dash"
+        );
+    }
+
+    #[test]
+    fn only_the_sixteen_ansi_colors_are_ever_used() {
+        // Fixed RGB / 256-colour values would override the user's terminal theme.
+        for color in [true, false] {
+            let mut a = app();
+            a.on_transcribe_state(
+                "2026-10-21-1000-planning",
+                crate::app::JobState::Transcribing(40),
+            );
+            for screen in [Screen::List, Screen::Detail, Screen::Help] {
+                a.screen = screen;
+                let buf = buffer_of(&a, 100, 16, color);
+                for cell in &buf.content {
+                    for c in [cell.fg, cell.bg] {
+                        assert!(
+                            !matches!(c, Color::Rgb(..) | Color::Indexed(_)),
+                            "{c:?} on {screen:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn no_color_removes_every_color_but_keeps_structure() {
+        let a = app();
+        let buf = buffer_of(&a, 100, 12, false);
+        assert!(buf
+            .content
+            .iter()
+            .all(|c| c.fg == Color::Reset && c.bg == Color::Reset));
+        // Bold and the marker survive, so the selection is still visible.
+        let name = cell_at(&buf, "2026-10-22-1430-standup");
+        assert!(name.modifier.contains(Modifier::BOLD));
+        assert!(buffer_of(&a, 100, 12, false)
+            .content
+            .iter()
+            .any(|c| c.symbol() == "▸"));
+    }
+
+    #[test]
+    fn recording_is_red_and_the_meter_is_the_accent() {
+        let mut a = app();
+        a.on_recording_started("2026-10-23-0900", nastro_record::CaptureMode::Mixed, None);
+        a.on_recording_tick(std::time::Duration::from_secs(5), None);
+        let buf = buffer_of(&a, 100, 16, true);
+        assert_eq!(cell_at(&buf, "● REC").fg, Color::Red);
+        assert_eq!(cell_at(&buf, "░").fg, Color::Cyan, "the level meter");
+    }
+
+    #[test]
+    fn errors_are_red_and_ordinary_status_is_the_accent() {
+        let mut a = app();
+        a.on_action_error("something broke");
+        assert_eq!(
+            cell_at(&buffer_of(&a, 100, 12, true), "something broke").fg,
+            Color::Red
+        );
+        let mut a = app();
+        a.show_busy("working");
+        assert_eq!(
+            cell_at(&buffer_of(&a, 100, 12, true), "working").fg,
+            Color::Cyan
+        );
+    }
+    #[test]
+    fn a_multi_line_transcript_preview_keeps_one_line_per_speaker_turn_with_the_label_in_the_accent(
+    ) {
+        let mut a = app();
+        a.screen = Screen::Detail;
+        a.on_preview(Some(
+            "[SPEAKER_00] Hello there.\n[SPEAKER_01] Hi.\nplain line".into(),
+        ));
+        let buf = buffer_of(&a, 100, 20, true);
+        let text: Vec<String> = (0..buf.area.height)
+            .map(|y| {
+                (0..buf.area.width)
+                    .map(|x| buf[(x, y)].symbol().to_string())
+                    .collect()
+            })
+            .collect();
+        let row = |needle: &str| {
+            text.iter()
+                .position(|l| l.contains(needle))
+                .unwrap_or_else(|| panic!("{needle} missing"))
+        };
+        let (r0, r1, r2) = (row("Hello there."), row("Hi."), row("plain line"));
+        assert!(
+            r0 < r1 && r1 < r2,
+            "each turn is on its own row: {r0} {r1} {r2}"
+        );
+        assert!(
+            !text[r0].contains("[SPEAKER_01]"),
+            "turns are not glued together: {}",
+            text[r0]
+        );
+        assert_eq!(cell_at(&buf, "[SPEAKER_00]").fg, Color::Cyan);
+        assert_eq!(cell_at(&buf, "Hello there.").fg, Color::Reset);
+    }
+
+    #[test]
+    fn a_long_dialog_still_shows_its_own_options_row() {
+        let mut a = app();
+        a.modal = Some(Modal::ConfirmDownloadModel {
+            dir_name: "x".into(),
+            model: "large-v3-turbo".into(),
+            size_text: "1.5 GB".into(),
+            overwrite: false,
+        });
+        // Check inside the box: the footer also offers "y confirm", but only the dialog says "y yes".
+        let text = render(&a, 100, 20);
+        assert!(
+            text.contains("y yes"),
+            "the dialog lost its options row:\n{text}"
+        );
+
+        a.modal = Some(Modal::ConfirmDelete {
+            dir_name: "2026-10-22-1430-standup".into(),
+        });
+        assert!(render(&a, 100, 20).contains("y yes"), "short dialogs too");
+    }
+
+    #[test]
+    fn no_help_line_is_cut_off_by_the_box() {
+        let mut a = app();
+        a.screen = Screen::Help;
+        let text = render(&a, 100, 24);
+        for want in [
+            "stop & save (while recording)",
+            "delete -> Recycle Bin / Trash (asks first)",
+            "transcribe in the background",
+            "cancel its transcription",
+        ] {
+            assert!(text.contains(want), "{want:?} is cut off:\n{text}");
+        }
     }
 
     #[test]

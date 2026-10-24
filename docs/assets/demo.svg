@@ -1,0 +1,335 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 884 404" width="884" height="404" role="img" aria-label="An animated recording of the nastro terminal interface: browsing recordings, opening one to read its speaker-labelled transcript, the help screen, filtering, and the prompt before a speech model is downloaded.">
+<title>nastro terminal demo</title>
+<style>
+text{font-family:ui-monospace,SFMono-Regular,'Cascadia Mono','JetBrains Mono',Menlo,Consolas,'DejaVu Sans Mono','Liberation Mono',monospace;font-size:14px;white-space:pre}
+.f{visibility:hidden;animation-duration:20.58s;animation-iteration-count:infinite;animation-timing-function:step-end}
+.f0{visibility:visible}
+@keyframes a0{0.000%{visibility:visible}10.690%{visibility:hidden}100%{visibility:hidden}}
+.f0{animation-name:a0}
+@keyframes a1{0%{visibility:hidden}10.690%{visibility:visible}14.577%{visibility:hidden}100%{visibility:hidden}}
+.f1{animation-name:a1}
+@keyframes a2{0%{visibility:hidden}14.577%{visibility:visible}18.465%{visibility:hidden}100%{visibility:hidden}}
+.f2{animation-name:a2}
+@keyframes a3{0%{visibility:hidden}18.465%{visibility:visible}20.894%{visibility:hidden}100%{visibility:hidden}}
+.f3{animation-name:a3}
+@keyframes a4{0%{visibility:hidden}20.894%{visibility:visible}23.810%{visibility:hidden}100%{visibility:hidden}}
+.f4{animation-name:a4}
+@keyframes a5{0%{visibility:hidden}23.810%{visibility:visible}41.302%{visibility:hidden}100%{visibility:hidden}}
+.f5{animation-name:a5}
+@keyframes a6{0%{visibility:hidden}41.302%{visibility:visible}44.218%{visibility:hidden}100%{visibility:hidden}}
+.f6{animation-name:a6}
+@keyframes a7{0%{visibility:hidden}44.218%{visibility:visible}55.879%{visibility:hidden}100%{visibility:hidden}}
+.f7{animation-name:a7}
+@keyframes a8{0%{visibility:hidden}55.879%{visibility:visible}58.309%{visibility:hidden}100%{visibility:hidden}}
+.f8{animation-name:a8}
+@keyframes a9{0%{visibility:hidden}58.309%{visibility:visible}60.739%{visibility:hidden}100%{visibility:hidden}}
+.f9{animation-name:a9}
+@keyframes a10{0%{visibility:hidden}60.739%{visibility:visible}61.565%{visibility:hidden}100%{visibility:hidden}}
+.f10{animation-name:a10}
+@keyframes a11{0%{visibility:hidden}61.565%{visibility:visible}62.391%{visibility:hidden}100%{visibility:hidden}}
+.f11{animation-name:a11}
+@keyframes a12{0%{visibility:hidden}62.391%{visibility:visible}63.217%{visibility:hidden}100%{visibility:hidden}}
+.f12{animation-name:a12}
+@keyframes a13{0%{visibility:hidden}63.217%{visibility:visible}70.845%{visibility:hidden}100%{visibility:hidden}}
+.f13{animation-name:a13}
+@keyframes a14{0%{visibility:hidden}70.845%{visibility:visible}73.761%{visibility:hidden}100%{visibility:hidden}}
+.f14{animation-name:a14}
+@keyframes a15{0%{visibility:hidden}73.761%{visibility:visible}76.676%{visibility:hidden}100%{visibility:hidden}}
+.f15{animation-name:a15}
+@keyframes a16{0%{visibility:hidden}76.676%{visibility:visible}92.225%{visibility:hidden}100%{visibility:hidden}}
+.f16{animation-name:a16}
+@keyframes a17{0%{visibility:hidden}92.225%{visibility:visible}}
+.f17{animation-name:a17}
+</style>
+<rect width="884" height="404" rx="10" fill="#1e1e2e"/>
+<g class="f f0">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="38.8" y="89.0" textLength="714.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-0930-standup                                             12:34     38.0 MB</text>
+<text x="786.4" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">-</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f1">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="38.8" y="71.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="22.0" y="89.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-0930-standup                                             12:34     38.0 MB    -</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f2">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="38.8" y="71.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="38.8" y="89.0" textLength="714.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-0930-standup                                             12:34     38.0 MB</text>
+<text x="786.4" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">-</text>
+<text x="22.0" y="107.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f3">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="38.8" y="71.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="22.0" y="89.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-0930-standup                                             12:34     38.0 MB    -</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f4">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="38.8" y="89.0" textLength="714.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-0930-standup                                             12:34     38.0 MB</text>
+<text x="786.4" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">-</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f5">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="22.0" y="53.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">┌</text>
+<text x="38.8" y="53.0" textLength="75.6" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">Recording</text>
+<text x="122.8" y="53.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">───────────────────────────────────────────────────────────────────────────────────────┐</text>
+<text x="22.0" y="71.0" textLength="42.0" lengthAdjust="spacing" fill="#6c7086">│Name</text>
+<text x="122.8" y="71.0" textLength="252.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-1102-client-kickoff</text>
+<text x="853.6" y="71.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="89.0" textLength="58.8" lengthAdjust="spacing" fill="#6c7086">│Folder</text>
+<text x="122.8" y="89.0" textLength="420.0" lengthAdjust="spacing" fill="#cdd6f4">~/Recordings/nastro/2026-08-13-1102-client-kickoff</text>
+<text x="853.6" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="107.0" textLength="58.8" lengthAdjust="spacing" fill="#6c7086">│Length</text>
+<text x="122.8" y="107.0" textLength="42.0" lengthAdjust="spacing" fill="#cdd6f4">42:07</text>
+<text x="853.6" y="107.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="125.0" textLength="42.0" lengthAdjust="spacing" fill="#6c7086">│Size</text>
+<text x="122.8" y="125.0" textLength="67.2" lengthAdjust="spacing" fill="#cdd6f4">128.0 MB</text>
+<text x="853.6" y="125.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="143.0" textLength="92.4" lengthAdjust="spacing" fill="#6c7086">│Transcript</text>
+<text x="122.8" y="143.0" textLength="25.2" lengthAdjust="spacing" fill="#cdd6f4">yes</text>
+<text x="853.6" y="143.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="161.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="853.6" y="161.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="179.0" textLength="159.6" lengthAdjust="spacing" fill="#6c7086">│Transcript preview</text>
+<text x="853.6" y="179.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="197.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="30.4" y="197.0" textLength="100.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">[SPEAKER_00]</text>
+<text x="139.6" y="197.0" textLength="638.4" lengthAdjust="spacing" fill="#cdd6f4">Thanks everyone for joining. Let's start with the goals for the first phase.</text>
+<text x="853.6" y="197.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="215.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="30.4" y="215.0" textLength="100.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">[SPEAKER_01]</text>
+<text x="139.6" y="215.0" textLength="621.6" lengthAdjust="spacing" fill="#cdd6f4">We want the recorder on both platforms before the end of the quarter, with</text>
+<text x="853.6" y="215.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="233.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="30.4" y="233.0" textLength="294.0" lengthAdjust="spacing" fill="#cdd6f4">transcripts staying on the machine.</text>
+<text x="853.6" y="233.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="30.4" y="251.0" textLength="100.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">[SPEAKER_00]</text>
+<text x="139.6" y="251.0" textLength="420.0" lengthAdjust="spacing" fill="#cdd6f4">Agreed. Priya, can you own the audio capture side?</text>
+<text x="853.6" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="269.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="30.4" y="269.0" textLength="100.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">[SPEAKER_02]</text>
+<text x="139.6" y="269.0" textLength="613.2" lengthAdjust="spacing" fill="#cdd6f4">Yes. I'll start with the Windows loopback path and report back on Friday.</text>
+<text x="853.6" y="269.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="287.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="853.6" y="287.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="305.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="853.6" y="305.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="323.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="853.6" y="323.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="341.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="853.6" y="341.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="22.0" y="359.0" textLength="840.0" lengthAdjust="spacing" fill="#6c7086">└──────────────────────────────────────────────────────────────────────────────────────────────────┘</text>
+<text x="22.0" y="377.0" textLength="520.8" lengthAdjust="spacing" fill="#6c7086">esc back  ·  t transcribe  ·  o reveal  ·  d delete  ·  ? help</text>
+</g>
+<g class="f f6">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="38.8" y="89.0" textLength="714.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-0930-standup                                             12:34     38.0 MB</text>
+<text x="786.4" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">-</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f7">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="181.6" y="71.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">┌</text>
+<text x="198.4" y="71.0" textLength="33.6" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">Keys</text>
+<text x="240.4" y="71.0" textLength="462.0" lengthAdjust="spacing" fill="#6c7086">──────────────────────────────────────────────────────┐</text>
+<text x="181.6" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="694.0" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="107.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="107.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">r</text>
+<text x="341.2" y="107.0" textLength="235.2" lengthAdjust="spacing" fill="#cdd6f4">record (name + capture mode)</text>
+<text x="694.0" y="107.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="125.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="125.0" textLength="117.6" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">s / q / ctrl+c</text>
+<text x="341.2" y="125.0" textLength="243.6" lengthAdjust="spacing" fill="#cdd6f4">stop &amp; save (while recording)</text>
+<text x="694.0" y="125.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="143.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="143.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">x</text>
+<text x="341.2" y="143.0" textLength="252.0" lengthAdjust="spacing" fill="#cdd6f4">discard recording (asks first)</text>
+<text x="694.0" y="143.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="161.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="161.0" textLength="42.0" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">enter</text>
+<text x="341.2" y="161.0" textLength="184.8" lengthAdjust="spacing" fill="#cdd6f4">open recording details</text>
+<text x="694.0" y="161.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="179.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="179.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">t</text>
+<text x="341.2" y="179.0" textLength="235.2" lengthAdjust="spacing" fill="#cdd6f4">transcribe in the background</text>
+<text x="694.0" y="179.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="197.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="197.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">c</text>
+<text x="341.2" y="197.0" textLength="201.6" lengthAdjust="spacing" fill="#cdd6f4">cancel its transcription</text>
+<text x="694.0" y="197.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="215.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="215.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">o</text>
+<text x="341.2" y="215.0" textLength="184.8" lengthAdjust="spacing" fill="#cdd6f4">reveal in file manager</text>
+<text x="694.0" y="215.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="233.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="233.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">d</text>
+<text x="341.2" y="233.0" textLength="352.8" lengthAdjust="spacing" fill="#cdd6f4">delete -&gt; Recycle Bin / Trash (asks first)</text>
+<text x="694.0" y="233.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">/</text>
+<text x="341.2" y="251.0" textLength="117.6" lengthAdjust="spacing" fill="#cdd6f4">filter by name</text>
+<text x="694.0" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="269.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="269.0" textLength="100.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">j k / arrows</text>
+<text x="341.2" y="269.0" textLength="33.6" lengthAdjust="spacing" fill="#cdd6f4">move</text>
+<text x="694.0" y="269.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="287.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="287.0" textLength="25.2" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">g G</text>
+<text x="341.2" y="287.0" textLength="100.8" lengthAdjust="spacing" fill="#cdd6f4">first / last</text>
+<text x="694.0" y="287.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="305.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="305.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">?</text>
+<text x="341.2" y="305.0" textLength="75.6" lengthAdjust="spacing" fill="#cdd6f4">this help</text>
+<text x="694.0" y="305.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="323.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="206.8" y="323.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">q</text>
+<text x="341.2" y="323.0" textLength="33.6" lengthAdjust="spacing" fill="#cdd6f4">quit</text>
+<text x="694.0" y="323.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">│</text>
+<text x="181.6" y="341.0" textLength="520.8" lengthAdjust="spacing" fill="#6c7086">└────────────────────────────────────────────────────────────┘</text>
+<text x="22.0" y="377.0" textLength="109.2" lengthAdjust="spacing" fill="#6c7086">any key close</text>
+</g>
+<g class="f f8">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="38.8" y="89.0" textLength="714.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-0930-standup                                             12:34     38.0 MB</text>
+<text x="786.4" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">-</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f9">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="38.8" y="89.0" textLength="714.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-0930-standup                                             12:34     38.0 MB</text>
+<text x="786.4" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">-</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="30.4" y="377.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">/</text>
+<text x="38.8" y="377.0" textLength="8.4" lengthAdjust="spacing" fill="#cdd6f4">▏</text>
+<text x="72.4" y="377.0" textLength="193.2" lengthAdjust="spacing" fill="#6c7086">enter apply · esc clear</text>
+</g>
+<g class="f f10">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="193.2" lengthAdjust="spacing" fill="#6c7086">3 recordings  filter: a</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-0930-standup                                             12:34     38.0 MB    -</text>
+<text x="38.8" y="89.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="30.4" y="377.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">/</text>
+<text x="38.8" y="377.0" textLength="16.8" lengthAdjust="spacing" fill="#cdd6f4">a▏</text>
+<text x="80.8" y="377.0" textLength="193.2" lengthAdjust="spacing" fill="#6c7086">enter apply · esc clear</text>
+</g>
+<g class="f f11">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="201.6" lengthAdjust="spacing" fill="#6c7086">3 recordings  filter: ar</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="30.4" y="377.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">/</text>
+<text x="38.8" y="377.0" textLength="25.2" lengthAdjust="spacing" fill="#cdd6f4">ar▏</text>
+<text x="89.2" y="377.0" textLength="193.2" lengthAdjust="spacing" fill="#6c7086">enter apply · esc clear</text>
+</g>
+<g class="f f12">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="210.0" lengthAdjust="spacing" fill="#6c7086">3 recordings  filter: arc</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="30.4" y="377.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">/</text>
+<text x="38.8" y="377.0" textLength="33.6" lengthAdjust="spacing" fill="#cdd6f4">arc▏</text>
+<text x="97.6" y="377.0" textLength="193.2" lengthAdjust="spacing" fill="#6c7086">enter apply · esc clear</text>
+</g>
+<g class="f f13">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="218.4" lengthAdjust="spacing" fill="#6c7086">3 recordings  filter: arch</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="30.4" y="377.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">/</text>
+<text x="38.8" y="377.0" textLength="42.0" lengthAdjust="spacing" fill="#cdd6f4">arch▏</text>
+<text x="106.0" y="377.0" textLength="193.2" lengthAdjust="spacing" fill="#6c7086">enter apply · esc clear</text>
+</g>
+<g class="f f14">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="22.0" y="71.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="38.8" y="89.0" textLength="714.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-0930-standup                                             12:34     38.0 MB</text>
+<text x="786.4" y="89.0" textLength="8.4" lengthAdjust="spacing" fill="#6c7086">-</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f15">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="38.8" y="71.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="22.0" y="89.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-0930-standup                                             12:34     38.0 MB    -</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+<g class="f f16">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="38.8" y="71.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="22.0" y="89.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-0930-standup                                             12:34     38.0 MB    -</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="190.0" y="161.0" textLength="504.0" lengthAdjust="spacing" fill="#f9e2af">┌ Download speech model? ──────────────────────────────────┐</text>
+<text x="190.0" y="179.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="685.6" y="179.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="190.0" y="197.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="198.4" y="197.0" textLength="478.8" lengthAdjust="spacing" fill="#cdd6f4">The model large-v3-turbo (1.5 GB) is not on this computer</text>
+<text x="685.6" y="197.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="190.0" y="215.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="198.4" y="215.0" textLength="310.8" lengthAdjust="spacing" fill="#cdd6f4">yet. Download it from huggingface.co?</text>
+<text x="685.6" y="215.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="190.0" y="233.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="685.6" y="233.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="190.0" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="198.4" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">y</text>
+<text x="215.2" y="251.0" textLength="25.2" lengthAdjust="spacing" fill="#6c7086">yes</text>
+<text x="265.6" y="251.0" textLength="109.2" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">any other key</text>
+<text x="383.2" y="251.0" textLength="50.4" lengthAdjust="spacing" fill="#6c7086">cancel</text>
+<text x="685.6" y="251.0" textLength="8.4" lengthAdjust="spacing" fill="#f9e2af">│</text>
+<text x="190.0" y="269.0" textLength="504.0" lengthAdjust="spacing" fill="#f9e2af">└──────────────────────────────────────────────────────────┘</text>
+<text x="22.0" y="377.0" textLength="285.6" lengthAdjust="spacing" fill="#6c7086">y confirm  ·  any other key cancel</text>
+</g>
+<g class="f f17">
+<text x="30.4" y="35.0" textLength="50.4" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">nastro</text>
+<text x="97.6" y="35.0" textLength="100.8" lengthAdjust="spacing" fill="#6c7086">3 recordings</text>
+<text x="38.8" y="53.0" textLength="756.0" lengthAdjust="spacing" fill="#6c7086">NAME                                                                LENGTH    SIZE       T</text>
+<text x="38.8" y="71.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-13-1102-client-kickoff                                      42:07     128.0 MB   ✓</text>
+<text x="22.0" y="89.0" textLength="772.8" lengthAdjust="spacing" fill="#94e2d5" font-weight="700">▸ 2026-08-13-0930-standup                                             12:34     38.0 MB    -</text>
+<text x="38.8" y="107.0" textLength="756.0" lengthAdjust="spacing" fill="#cdd6f4">2026-08-11-1500-architecture-review                                 55:11     168.0 MB   ✓</text>
+<text x="22.0" y="377.0" textLength="739.2" lengthAdjust="spacing" fill="#6c7086">r record  ·  enter open  ·  / filter  ·  t transcribe  ·  d delete  ·  ? help  ·  q quit</text>
+</g>
+</svg>

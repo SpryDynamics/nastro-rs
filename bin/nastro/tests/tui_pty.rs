@@ -47,6 +47,9 @@ impl Term {
         let mut cmd = CommandBuilder::new(env!("CARGO_BIN_EXE_nastro"));
         cmd.args(args);
         cmd.env("NASTRO_CONFIG", config);
+        // Hermetic: a developer's own Hugging Face token (in their user environment, which the pseudo-terminal
+        // inherits) must never decide what these tests do, nor reach the program under test.
+        cmd.env_remove("HF_TOKEN");
         for (k, v) in envs {
             cmd.env(k, v);
         }

@@ -6,6 +6,26 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **TUI colors**: a cyan accent for the title, the selected row (now marked with `▸` and bold instead of inverted video),
+  panel titles, level meters, speaker labels and key names; dim gray for borders, labels and hints; red for recording and
+  errors. Only the terminal's 16 ANSI colors are used, never fixed RGB, so it follows the user's terminal theme. `NO_COLOR`
+  (and `TERM=dumb`) turn colors off entirely.
+- Transcript preview shows one line per speaker turn, with `[SPEAKER_00]` labels in the accent color. (Newlines were being
+  dropped, gluing consecutive turns together.)
+
+### Fixed
+
+- The help screen cut off two of its lines (`...asks before do`, `...transcriptio`) since transcription was added.
+- Dialogs whose question wraps to a second line (the model download prompt) lost their own `y yes / any other key cancel`
+  row off the bottom of the box; the box now grows with its text.
+
+### Added
+
+- README header: logo, tagline, badges and an **animated demo of the real TUI** (`docs/assets/demo.svg`), produced by
+  `eng/render-demo.ps1`: it runs the actual binary in a pseudo-terminal on sample recordings and records the screens, so it
+  cannot drift from what the program does. The path shown in the picture is redacted.
 ## [0.1.0] - 2026-10-24
 
 First release (pre-release: the project is 0.x). Recording, browsing and on-device transcription on Windows and Linux,
