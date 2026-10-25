@@ -10,7 +10,11 @@
 #>
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$File)
+$File = [IO.Path]::GetFullPath($File)
 $ErrorActionPreference = 'Stop'
+# The signing tool reads its endpoint/account/profile from .az-sign.json in the *current directory*, and Inno Setup runs this
+# hook from the installer's own folder. Run from the repository root, where that file lives.
+Set-Location (Join-Path $PSScriptRoot '..')
 $tool = Join-Path $env:USERPROFILE '.dotnet\tools\az-artifact-sign.exe'
 if (-not (Test-Path $tool)) { $tool = (Get-Command az-artifact-sign -ErrorAction Stop).Source }
 
