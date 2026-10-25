@@ -1287,7 +1287,7 @@ dependencies = [
 
 [[package]]
 name = "nastro"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1306,7 +1306,7 @@ dependencies = [
 
 [[package]]
 name = "nastro-audio"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "env_logger",
  "libpulse-binding",
@@ -1318,7 +1318,7 @@ dependencies = [
 
 [[package]]
 name = "nastro-config"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "directories",
  "serde",
@@ -1329,7 +1329,7 @@ dependencies = [
 
 [[package]]
 name = "nastro-record"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "fs4",
@@ -1345,7 +1345,7 @@ dependencies = [
 
 [[package]]
 name = "nastro-records"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1355,7 +1355,7 @@ dependencies = [
 
 [[package]]
 name = "nastro-tap"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "ctrlc",
@@ -1367,7 +1367,7 @@ dependencies = [
 
 [[package]]
 name = "nastro-transcribe"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "directories",
  "log",
@@ -1386,7 +1386,7 @@ dependencies = [
 
 [[package]]
 name = "nastro-tui"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ctrlc",
  "nastro-config",

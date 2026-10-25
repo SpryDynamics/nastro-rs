@@ -6,6 +6,11 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-24
+
+A polish release: a colored terminal interface, three display bugs fixed, and the project's name, logo and notices
+sorted out. Release archives are now named `nastro-rs-<version>-...` (the command is still `nastro`).
+
 ### Changed
 
 - **The project is now called nastro-rs** (the command it installs is still `nastro`). Release archives are named
