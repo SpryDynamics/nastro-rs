@@ -47,7 +47,7 @@ $OutDir = (Resolve-Path $OutDir).Path
 $setup = Join-Path $OutDir "nastro-rs-$Version-windows-x86_64-setup.exe"
 if (Test-Path $setup) { Remove-Item $setup -Force }
 
-$args_ = @("/DAppVersion=$Version", "/DBinDir=$((Resolve-Path $BinDir).Path)", "/DOutputDir=$OutDir", '/Qp')
+$args_ = @("/DAppVersion=$Version", "/DBinDir=$((Resolve-Path $BinDir).Path)", "/DOutputDir=$OutDir")
 if ($Sign) {
     $signScript = Join-Path $PSScriptRoot 'sign-file.ps1'
     # $q is a quote and $f the file, in Inno Setup's command-line syntax.
