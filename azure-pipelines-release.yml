@@ -43,6 +43,8 @@ variables:
   # Pinned so a release can never pick up a newer, unreviewed signing toolchain.
   azArtifactSignVersion: 0.1.0
   signCliVersion: 0.9.1-beta.26475.3
+  # Inno Setup builds the Windows installer; pinned like the signing tools.
+  innoSetupVersion: 6.7.3
   # Identifiers (not secrets) for the GitHub App that publishes releases. Its private key
   # lives only in this Key Vault secret; the signing identity can read that one secret.
   githubKeyVault: kv-sdsync-b748b4
@@ -113,6 +115,56 @@ stages:
           - pwsh: ./eng/package.ps1
             displayName: Package
 
+          # The Windows installer (Inno Setup), built from the same signed binaries as the zip. Pinned, like the signing
+          # tools, so a release never picks up a newer, unreviewed compiler.
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              if (-not (Get-Command ISCC.exe -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+                choco install innosetup --version=$(innoSetupVersion) -y --no-progress
+                if ($LASTEXITCODE -ne 0) { throw 'installing Inno Setup failed' }
+              }
+            displayName: Install Inno Setup (pinned)
+
+          - ${{ if eq(parameters.signWindows, true) }}:
+              # The installer and its uninstaller are signed by Inno Setup calling eng/sign-file.ps1, so this runs in the
+              # same signing context as the binaries.
+              - task: AzureCLI@2
+                displayName: Build and sign the installer
+                inputs:
+                  azureSubscription: $(signingServiceConnection)
+                  scriptType: pscore
+                  scriptLocation: inlineScript
+                  inlineScript: ./eng/build-installer.ps1 -Sign
+          - ${{ else }}:
+              - pwsh: ./eng/build-installer.ps1
+                displayName: Build the installer (unsigned)
+
+          # Install it for real on the agent: files, the command works, PATH is edited, uninstall removes everything.
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              $setup = Get-ChildItem dist\*-setup.exe | Select-Object -First 1
+              $dir = "$(Agent.TempDirectory)\nastro-install-test"
+              $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$dir`"" -Wait -PassThru
+              if ($p.ExitCode -ne 0) { throw "installer exited with $($p.ExitCode)" }
+              foreach ($f in 'nastro.exe','nastro-tap.exe','LICENSE','NOTICE.md','unins000.exe') { if (-not (Test-Path "$dir\$f")) { throw "installer did not install $f" } }
+              & "$dir\nastro.exe" --version
+              if ($LASTEXITCODE -ne 0) { throw 'installed nastro does not run' }
+              if (([Environment]::GetEnvironmentVariable('Path','User')).Split(';') -notcontains $dir) { throw 'the install folder was not added to the user PATH' }
+              if ('${{ parameters.signWindows }}' -eq 'true') {
+                $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+                foreach ($f in $setup.FullName, "$dir\unins000.exe", "$dir\nastro.exe") {
+                  $out = & $signtool.FullName verify /pa /v $f 2>&1
+                  $out | Select-String 'Issued to: Spry|timestamped|Successfully verified|Number of errors'
+                  if ($LASTEXITCODE -ne 0) { throw "$f failed signature verification" }
+                }
+              }
+              $u = Start-Process "$dir\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
+              if ($u.ExitCode -ne 0) { throw "uninstaller exited with $($u.ExitCode)" }
+              Start-Sleep 2
+              if (Test-Path $dir) { throw 'uninstall left the install folder behind' }
+              if (([Environment]::GetEnvironmentVariable('Path','User')).Split(';') -contains $dir) { throw 'uninstall left the PATH entry behind' }
+              Write-Host 'installer: install, run, PATH, signature and uninstall all verified'
+            displayName: Test the installer (install, run, uninstall)
           # Verify what actually ships, not the intermediate files: unpack the archive
           # and check the signature on the extracted binaries.
           - pwsh: |
@@ -188,7 +240,7 @@ stages:
           - pwsh: |
               $ErrorActionPreference = 'Stop'
               New-Item -ItemType Directory release | Out-Null
-              Copy-Item "$(Pipeline.Workspace)/windows/*", "$(Pipeline.Workspace)/linux/*" release -Include *.zip, *.tar.gz
+              Copy-Item "$(Pipeline.Workspace)/windows/*", "$(Pipeline.Workspace)/linux/*" release -Include *.zip, *.tar.gz, *-setup.exe
               Push-Location release
               Get-ChildItem -File | Where-Object { $_.Name -notlike '*.sha256' } | Sort-Object Name | ForEach-Object {
                 "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"

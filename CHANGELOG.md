@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Windows installer** (`nastro-rs-<version>-windows-x86_64-setup.exe`, Inno Setup), published alongside the zip. Per-user by
+  default (no administrator rights), optional machine-wide; puts `nastro` and `nastro-tap` together, optionally adds them to
+  `PATH` and the Start menu, registers an uninstaller, upgrades in place without duplicating the `PATH` entry, and restores
+  the previous `PATH` exactly on uninstall. The installer and its uninstaller are code-signed. The release pipeline installs
+  it for real on the build agent and checks the command, the `PATH`, the signatures and a clean uninstall before publishing.
+  Silent switches (`/VERYSILENT`, `/TASKS="!addtopath"`, `/ALLUSERS`, `/DIR=`) are documented in the README.
+
 ## [0.1.1] - 2026-10-24
 
 A polish release: a colored terminal interface, three display bugs fixed, and the project's name, logo and notices

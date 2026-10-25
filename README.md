@@ -84,9 +84,26 @@ bin/
 
 ## Install
 
-Download a release archive (see [`docs/releasing.md`](docs/releasing.md)), check it
-against `SHA256SUMS`, and unpack it. Keep `nastro` and `nastro-tap` in one folder. The
-Windows binaries are signed by Spry Dynamics, LLC. Nothing is installed system-wide.
+Everything is on the [releases page](https://github.com/SpryDynamics/nastro-rs/releases); check downloads against
+`SHA256SUMS` (details in [`docs/releasing.md`](docs/releasing.md)). Windows binaries and the installer are signed by
+Spry Dynamics, LLC.
+
+**Windows: the installer.** Run `nastro-rs-<version>-windows-x86_64-setup.exe`. It installs for your user only (no
+administrator rights; run it as administrator, or pick "all users", for a machine-wide install), puts `nastro` and
+`nastro-tap` together in one folder, optionally adds that folder to your `PATH`, optionally adds a Start menu shortcut,
+and registers an uninstaller under *Apps > Installed apps*. Installing a newer version over an older one upgrades it.
+For scripted installs:
+
+```powershell
+.\nastro-rs-<version>-windows-x86_64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+.\nastro-rs-<version>-windows-x86_64-setup.exe /VERYSILENT /TASKS="!addtopath"   # do not touch PATH
+.\nastro-rs-<version>-windows-x86_64-setup.exe /VERYSILENT /ALLUSERS /DIR="C:\Tools\nastro-rs"
+```
+
+The installer does not include FFmpeg (see Requirements); it tells you at the end if it is missing.
+
+**Windows or Linux: the archive.** Unpack the `.zip` / `.tar.gz` anywhere and keep `nastro` and `nastro-tap` in one
+folder. Nothing is installed system-wide.
 
 ## Requirements
 

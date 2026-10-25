@@ -8,12 +8,29 @@ CI (`azure-pipelines.yml`) is separate, never signs anything, and runs on every 
 | File | Contents |
 | --- | --- |
 | `nastro-rs-<ver>-windows-x86_64.zip` | `nastro.exe`, `nastro-tap.exe` (**signed + timestamped**), license files, `REQUIREMENTS.txt` |
+| `nastro-rs-<ver>-windows-x86_64-setup.exe` | Inno Setup installer with the same two signed binaries and license files; the installer **and its uninstaller** are signed |
 | `nastro-rs-<ver>-linux-x86_64.tar.gz` | `nastro`, `nastro-tap`, license files, `REQUIREMENTS.txt` |
-| `SHA256SUMS` | checksum of each archive (`sha256sum -c` compatible) |
+| `SHA256SUMS` | checksum of each archive and the installer (`sha256sum -c` compatible) |
 
 Every archive includes `LICENSE`, `NOTICE.md` and `THIRD_PARTY_NOTICES.md`, so
 redistribution terms travel with the binaries. `eng/package.ps1` fails if any of them,
 or a binary, is missing.
+
+### The Windows installer
+
+`installer/nastro-rs.iss` is an [Inno Setup](https://jrsoftware.org/isinfo.php) 6 script, built by `eng/build-installer.ps1`
+(which finds `ISCC.exe`, or tells you how to install it: `winget install JRSoftware.InnoSetup`). Locally:
+`./eng/build-installer.ps1` builds an unsigned installer from `target\release`; `-Sign` signs it (and the uninstaller) via
+`eng/sign-file.ps1`, which needs the same `az login` signing context as the binaries. In the release pipeline the build and
+signing run inside the signing service connection's `AzureCLI@2` task, then **a real install is tested on the agent**:
+silent install, the command runs, the folder is on the user `PATH`, the installer / uninstaller / binaries have valid
+Spry Dynamics signatures, then uninstall must remove the folder and the `PATH` entry. Inno Setup is pinned
+(`innoSetupVersion`) like the signing tools.
+
+Design decisions worth knowing: it defaults to a **per-user** install (`%LOCALAPPDATA%\Programs\nastro-rs`, `HKCU` PATH, no
+UAC), and a machine-wide one when run elevated. The `PATH` edit is exact: it appends the install folder (keeping the value
+expandable, so `%VARIABLES%` in a user's PATH survive), never duplicates it on upgrade, and removes only that entry on
+uninstall. `AppId` in the script must never change: it is how an upgrade or uninstall finds the existing install.
 
 FFmpeg is **not** bundled (see `NOTICE.md`). The Linux build links PulseAudio's client
 library dynamically (LGPL-2.1, compliant via dynamic linking).

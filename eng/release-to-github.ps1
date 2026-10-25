@@ -80,7 +80,7 @@ if (-not $Tag) { $Tag = if ($DryRun) { "v0.0.0-pipeline-test-" + [guid]::NewGuid
 if (-not $DryRun -and $Tag -ne "v$Version") { throw "Tag '$Tag' does not match version '$Version'." }
 $AssetsDir = (Resolve-Path $AssetsDir).Path
 
-$archives = Get-ChildItem $AssetsDir -File | Where-Object { $_.Name -match '\.(zip|tar\.gz)$' }
+$archives = Get-ChildItem $AssetsDir -File | Where-Object { $_.Name -match '(\.zip|\.tar\.gz|-setup\.exe)$' }
 if (-not ($archives | Where-Object Name -like '*windows*')) { throw "No Windows archive in $AssetsDir" }
 if (-not ($archives | Where-Object Name -like '*linux*')) { throw "No Linux archive in $AssetsDir" }
 if ($archives | Where-Object { $_.Name -notlike "nastro-rs-$Version-*" }) { throw "Archive name does not carry version ${Version}: $($archives.Name -join ', ')" }
