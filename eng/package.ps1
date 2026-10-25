@@ -9,7 +9,7 @@
   Then:          ./eng/package.ps1
 
   Produces, in -OutDir:
-    nastro-<version>-<os>-<arch>.zip     (Windows)  or  .tar.gz  (Linux)
+    nastro-rs-<version>-<os>-<arch>.zip  (Windows)  or  .tar.gz  (Linux)
     <same name>.sha256                   (checksum, `sha256sum -c` compatible)
 
   Every archive carries the license, NOTICE and the generated third-party license
@@ -51,7 +51,7 @@ foreach ($b in $binaries) { if (-not (Test-Path (Join-Path $BinDir $b))) { $miss
 foreach ($d in $docs)     { if (-not (Test-Path (Join-Path $root $d)))   { $missing += (Join-Path $root $d) } }
 if ($missing) { throw "Cannot package, missing:`n  " + ($missing -join "`n  ") }
 
-$name = "nastro-$Version-$osName-$arch"
+$name = "nastro-rs-$Version-$osName-$arch"
 $stage = Join-Path $OutDir $name
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -61,7 +61,7 @@ foreach ($d in $docs)     { Copy-Item (Join-Path $root $d) $stage }
 
 # A short, accurate run-time requirements note that ships with the binaries.
 $requirements = @"
-nastro $Version ($osName $arch)
+nastro-rs $Version ($osName $arch) - the command is: nastro
 
 Run-time requirements
   * ffmpeg on PATH (or set NASTRO_FFMPEG to its full path). nastro runs it as a

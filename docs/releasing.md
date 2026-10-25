@@ -7,8 +7,8 @@ CI (`azure-pipelines.yml`) is separate, never signs anything, and runs on every 
 
 | File | Contents |
 | --- | --- |
-| `nastro-<ver>-windows-x86_64.zip` | `nastro.exe`, `nastro-tap.exe` (**signed + timestamped**), license files, `REQUIREMENTS.txt` |
-| `nastro-<ver>-linux-x86_64.tar.gz` | `nastro`, `nastro-tap`, license files, `REQUIREMENTS.txt` |
+| `nastro-rs-<ver>-windows-x86_64.zip` | `nastro.exe`, `nastro-tap.exe` (**signed + timestamped**), license files, `REQUIREMENTS.txt` |
+| `nastro-rs-<ver>-linux-x86_64.tar.gz` | `nastro`, `nastro-tap`, license files, `REQUIREMENTS.txt` |
 | `SHA256SUMS` | checksum of each archive (`sha256sum -c` compatible) |
 
 Every archive includes `LICENSE`, `NOTICE.md` and `THIRD_PARTY_NOTICES.md`, so
@@ -37,8 +37,8 @@ packaged artifacts without a tag. Untick *Sign the Windows binaries* to skip sig
 az pipelines runs artifact download --artifact-name release --path rel --run-id <id> `
   --organization https://dev.azure.com/sprydynamics --project oss-tools
 Get-Content rel\SHA256SUMS               # compare with Get-FileHash on each archive
-Expand-Archive rel\nastro-*-windows-x86_64.zip rel\win
-signtool verify /pa /v rel\win\nastro-*\nastro.exe   # issued to "Spry Dynamics. LLC", timestamped
+Expand-Archive rel\nastro-rs-*-windows-x86_64.zip rel\win
+signtool verify /pa /v rel\win\nastro-rs-*\nastro.exe   # issued to "Spry Dynamics. LLC", timestamped
 ```
 
 Artifact Signing certificates are valid for **3 days**. The signature stays valid

@@ -1,4 +1,4 @@
-# Release pipeline: builds, signs (Windows) and packages nastro.
+# Release pipeline: builds, signs (Windows) and packages nastro-rs (the command it installs is `nastro`).
 #
 # Runs on version tags (v*), and can be run by hand to produce signed, packaged
 # artifacts without cutting a release. CI (azure-pipelines.yml) is separate and
@@ -105,7 +105,7 @@ stages:
                     $ErrorActionPreference = 'Stop'
                     $tool = Join-Path $env:USERPROFILE '.dotnet\tools\az-artifact-sign.exe'
                     & $tool sign target\release\nastro.exe target\release\nastro-tap.exe `
-                      --description nastro `
+                      --description nastro-rs `
                       --description-url https://dev.azure.com/sprydynamics/oss-tools/_git/nastro-rs `
                       --credential-type azure-cli --verify
                     if ($LASTEXITCODE -ne 0) { throw "signing failed with exit code $LASTEXITCODE" }

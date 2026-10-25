@@ -8,6 +8,13 @@ to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The project is now called nastro-rs** (the command it installs is still `nastro`). Release archives are named
+  `nastro-rs-<version>-<os>-<arch>` (the folder inside too), the GitHub release is titled `nastro-rs <version>`, the
+  binaries are signed with the description `nastro-rs`, and the README, notices and release docs say so. Existing releases
+  keep their old names. The Cargo package names are unchanged (nothing is published to crates.io).
+- **New logo**: a terminal window with a prompt and a sound waveform, in teal and slate. It replaces a cassette-with-record-dot
+  design that was too close in concept and palette to the original project's logo.
+- **README wording**: the tagline and description are our own words (they had followed the original's phrasing closely).
 - **TUI colors**: a cyan accent for the title, the selected row (now marked with `▸` and bold instead of inverted video),
   panel titles, level meters, speaker labels and key names; dim gray for borders, labels and hints; red for recording and
   errors. Only the terminal's 16 ANSI colors are used, never fixed RGB, so it follows the user's terminal theme. `NO_COLOR`
@@ -17,12 +24,15 @@ to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NOTICE.md` credited the original's copyright to "scaccogatto"; its license names **Marco Boffo** (GitHub: scaccogatto).
 - The help screen cut off two of its lines (`...asks before do`, `...transcriptio`) since transcription was added.
 - Dialogs whose question wraps to a second line (the model download prompt) lost their own `y yes / any other key cancel`
   row off the bottom of the box; the box now grows with its text.
 
 ### Added
 
+- An explicit **"unofficial, not affiliated with or endorsed by"** notice in the README, `NOTICE.md` (new "Name and
+  affiliation" section) and `CONTRIBUTING.md`.
 - README header: logo, tagline, badges and an **animated demo of the real TUI** (`docs/assets/demo.svg`), produced by
   `eng/render-demo.ps1`: it runs the actual binary in a pseudo-terminal on sample recordings and records the screens, so it
   cannot drift from what the program does. The path shown in the picture is redacted.

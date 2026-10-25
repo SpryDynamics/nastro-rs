@@ -10,7 +10,7 @@ Do not open a public issue for a security problem. Include what you found, how t
 
 ## Scope
 
-nastro records your system audio and microphone to local files and spawns `ffmpeg`. Of particular interest:
+nastro-rs records your system audio and microphone to local files and spawns `ffmpeg`. Of particular interest:
 anything that makes recordings readable by other users, writes outside the recordings directory, runs unintended
 commands, or weakens the integrity of the signed release artifacts.
 

@@ -83,7 +83,7 @@ $AssetsDir = (Resolve-Path $AssetsDir).Path
 $archives = Get-ChildItem $AssetsDir -File | Where-Object { $_.Name -match '\.(zip|tar\.gz)$' }
 if (-not ($archives | Where-Object Name -like '*windows*')) { throw "No Windows archive in $AssetsDir" }
 if (-not ($archives | Where-Object Name -like '*linux*')) { throw "No Linux archive in $AssetsDir" }
-if ($archives | Where-Object { $_.Name -notlike "nastro-$Version-*" }) { throw "Archive name does not carry version ${Version}: $($archives.Name -join ', ')" }
+if ($archives | Where-Object { $_.Name -notlike "nastro-rs-$Version-*" }) { throw "Archive name does not carry version ${Version}: $($archives.Name -join ', ')" }
 $assetFiles = @($archives.FullName) + (Join-Path $AssetsDir "SHA256SUMS")
 
 Write-Host "Release $Tag ($Version) -> $Repo$(if ($DryRun) { '  [DRY RUN]' })"
@@ -140,7 +140,7 @@ try {
     & gh release view $Tag -R $Repo 2>$null | Out-Null
     if ($LASTEXITCODE -eq 0) { throw "A release for $Tag already exists; refusing to overwrite it." }
     $prerelease = ($Version -match '^0\.' -or $Version -match '-')
-    $create = @("release", "create", $Tag, "-R", $Repo, "--draft", "--verify-tag", "--title", "nastro $Version", "--notes-file", $notesFile)
+    $create = @("release", "create", $Tag, "-R", $Repo, "--draft", "--verify-tag", "--title", "nastro-rs $Version", "--notes-file", $notesFile)
     if ($prerelease) { $create += "--prerelease" }
     Invoke-Native gh @create @assetFiles | Out-Null
     $releaseCreated = $true

@@ -1,5 +1,8 @@
 # Contributing to nastro-rs
 
+nastro-rs is an unofficial, independent project and is not affiliated with the original nastro (see [NOTICE.md](NOTICE.md)).
+Please keep contributions that way: do not copy code, images or text from the original project.
+
 Thanks for your interest. This is a small project; the notes below keep things smooth.
 
 ## How this repository is run

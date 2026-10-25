@@ -8,7 +8,21 @@ split and stdio protocol, and the capture-mixer design documented in its own
 `docs/stack.md`. No source code from the original project is copied; this is a
 from-scratch implementation informed by reading its public repository and documents.
 
-Original project: Copyright (c) scaccogatto, MIT License.
+Original project: Copyright (c) 2026 Marco Boffo (GitHub: scaccogatto), MIT License.
+
+## Name and affiliation
+
+**nastro-rs is an unofficial, independent project. It is not affiliated with, endorsed by or sponsored by the author of the original nastro, and it is not the original `nastro`.** It is a separate reimplementation for Windows and Linux, written and
+maintained by Spry Dynamics, LLC.
+
+* *Names.* `nastro-rs` is the name of this project (repository, releases, downloads). The command it installs is
+  still called `nastro`, after the Italian word for *tape*, which is also what the original calls its command. The
+  original targets macOS and this project Windows and Linux, so the two are not expected to meet on one machine.
+* *Code.* None of the original's source code is used.
+* *Artwork and wording.* The logo and the README demo are original to this project and share nothing with the
+  original's. No screenshot or image from the original is included, and the descriptive text is our own wording.
+* *Credit.* The design (file layout, the two-process split, the mixer's drift handling) was informed by the original's
+  public documents, as described above. The original is MIT licensed and is credited here as that license asks.
 
 See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for this project's own Rust
 dependency licenses.
