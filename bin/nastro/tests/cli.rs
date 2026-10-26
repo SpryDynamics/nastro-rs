@@ -356,3 +356,139 @@ fn a_whole_cli_run_with_speaker_labels() {
     // The token must not appear anywhere the user can see.
     assert!(!err.contains("hf_notarealtoken") && !stdout.contains("hf_notarealtoken"));
 }
+
+// ---------------------------------------------------------------------------------------------- `nastro config`
+
+const TOKEN: &str = "hf_AbCdEfGhIjKlMnOpQrStUv123456";
+
+fn config_set_with_stdin(cfg: &Path, args: &[&str], stdin: &str) -> Output {
+    use std::io::Write;
+    let mut child = Command::new(env!("CARGO_BIN_EXE_nastro"))
+        .env_remove("NASTRO_CONFIG")
+        .env_remove("HF_TOKEN")
+        .arg("--config")
+        .arg(cfg)
+        .args(args)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(stdin.as_bytes())
+        .unwrap();
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn config_set_hf_token_reads_stdin_keeps_the_rest_and_never_prints_the_token() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.toml");
+    std::fs::write(&cfg, "# mine\nlang = 'en'\n").unwrap();
+
+    let out = config_set_with_stdin(
+        &cfg,
+        &["config", "set", "hf_token"],
+        &format!("{TOKEN}\r\n"),
+    );
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    assert!(!text(&out.stdout).contains(TOKEN) && !text(&out.stderr).contains(TOKEN));
+
+    let written = std::fs::read_to_string(&cfg).unwrap();
+    assert!(written.contains("# mine") && written.contains("lang = 'en'"));
+    assert!(written.contains(&format!("hf_token = \"{TOKEN}\"")));
+}
+
+#[test]
+fn config_set_refuses_a_token_on_the_command_line() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.toml");
+    let out = nastro(Some(&cfg), &["config", "set", "hf_token", TOKEN]);
+    assert!(!out.status.success());
+    assert!(!text(&out.stderr).contains(TOKEN), "echoed the token");
+    assert!(!cfg.exists());
+}
+
+#[test]
+fn config_set_rejects_a_bad_token_without_echoing_it_and_leaves_the_file_alone() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.toml");
+    std::fs::write(&cfg, "lang = 'en'\n").unwrap();
+    let out = config_set_with_stdin(&cfg, &["config", "set", "hf_token"], "oops-not-a-token\n");
+    assert!(!out.status.success());
+    assert!(!text(&out.stderr).contains("oops-not-a-token"));
+    assert_eq!(std::fs::read_to_string(&cfg).unwrap(), "lang = 'en'\n");
+}
+
+#[test]
+fn config_set_changes_the_model_even_when_the_current_config_is_otherwise_unreadable_elsewhere() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("nested").join("config.toml");
+    let out = nastro(Some(&cfg), &["config", "set", "whisper_model", "small"]);
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    assert!(std::fs::read_to_string(&cfg)
+        .unwrap()
+        .contains("whisper_model = \"small\""));
+    let path = nastro(Some(&cfg), &["config", "path"]);
+    assert_eq!(text(&path.stdout).trim(), cfg.display().to_string());
+}
+
+#[test]
+fn config_check_hf_without_a_token_says_so_with_exit_status_2() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.toml");
+    std::fs::write(&cfg, "lang = 'en'\n").unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_nastro"))
+        .env_remove("HF_TOKEN")
+        .env_remove("NASTRO_CONFIG")
+        .arg("--config")
+        .arg(&cfg)
+        .args(["config", "check-hf"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(text(&out.stdout).contains("No Hugging Face token"));
+}
+
+#[test]
+fn config_set_hf_token_from_file_stores_it_and_deletes_the_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.toml");
+    let handoff = tmp.path().join("t.txt");
+    std::fs::write(&handoff, format!("{TOKEN}\r\n")).unwrap();
+    let out = nastro(
+        Some(&cfg),
+        &[
+            "config",
+            "set",
+            "hf_token",
+            "--from-file",
+            handoff.to_str().unwrap(),
+        ],
+    );
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    assert!(!handoff.exists(), "the hand-off file must be removed");
+    assert!(std::fs::read_to_string(&cfg).unwrap().contains(TOKEN));
+    assert!(!text(&out.stdout).contains(TOKEN) && !text(&out.stderr).contains(TOKEN));
+
+    // an unusable token still removes the file and leaves the config alone
+    std::fs::write(&handoff, "nonsense\n").unwrap();
+    let before = std::fs::read_to_string(&cfg).unwrap();
+    let out = nastro(
+        Some(&cfg),
+        &[
+            "config",
+            "set",
+            "hf_token",
+            "--from-file",
+            handoff.to_str().unwrap(),
+        ],
+    );
+    assert!(!out.status.success());
+    assert!(!handoff.exists());
+    assert_eq!(std::fs::read_to_string(&cfg).unwrap(), before);
+    assert!(!text(&out.stderr).contains("nonsense"));
+}

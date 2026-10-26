@@ -289,10 +289,11 @@ fn setup_whisperx(config: &Config) -> anyhow::Result<()> {
         outln!("  1. Create a free *read* token at https://huggingface.co/settings/tokens");
         outln!("  2. Accept the model terms at https://huggingface.co/pyannote/speaker-diarization-community-1");
         outln!(
-            "  3. Put the token in the config file as `hf_token = \"hf_...\"` (or set HF_TOKEN)"
+            "  3. Save the token:  echo hf_... | nastro config set hf_token   (or set HF_TOKEN)"
         );
     }
     outln!();
+    outln!("Check it works with: nastro config check-hf");
     outln!("Then: nastro transcribe last --transcriber whisperx   (or set `transcriber = \"whisperx\"`)");
     Ok(())
 }

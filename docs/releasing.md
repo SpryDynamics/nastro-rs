@@ -32,6 +32,14 @@ UAC), and a machine-wide one when run elevated. The `PATH` edit is exact: it app
 expandable, so `%VARIABLES%` in a user's PATH survive), never duplicates it on upgrade, and removes only that entry on
 uninstall. `AppId` in the script must never change: it is how an upgrade or uninstall finds the existing install.
 
+The installer can also fetch FFmpeg and WhisperX for the user (opt-in, through winget and `uv`; see the README). That logic
+lives in the `[Code]` section of the script and is tested offline by `eng/test-installer-deps.ps1`, run by the release
+pipeline: a stand-in `winget` and `whisperx`, `NASTRO_CONFIG` pointing at a temporary file, and `PATH` cut down to the system
+folders, so nothing is downloaded and the real settings are never touched. Rules to keep: a plain `/VERYSILENT` install must
+never use the network (a task that is ticked by default only runs when `/TASKS=` names it); a failed optional step must not
+fail the install; the Hugging Face token must never appear on a command line or in the setup log (scripts give a file name
+with `/HFTOKENFILE=`; the wizard hands the token to `nastro config set hf_token --from-file`, which deletes the file at once).
+
 FFmpeg is **not** bundled (see `NOTICE.md`). The Linux build links PulseAudio's client
 library dynamically (LGPL-2.1, compliant via dynamic linking).
 

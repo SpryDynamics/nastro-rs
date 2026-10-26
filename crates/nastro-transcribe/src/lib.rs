@@ -9,6 +9,7 @@
 
 pub mod audio;
 pub mod engine;
+pub mod hf;
 pub mod models;
 pub mod output;
 pub mod whisperx;

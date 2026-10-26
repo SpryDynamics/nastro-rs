@@ -8,6 +8,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+mod edit;
+pub use edit::{default_config_path, set_value, SetError, SETTABLE_KEYS};
+
 /// Directory permission bits applied on Unix (Linux) when creating recording
 /// directories. Windows has no POSIX mode bits; see [`mode::ensure_private_dir`] /
 /// [`mode::ensure_private_file`] for the per-platform story.

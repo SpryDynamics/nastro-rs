@@ -58,6 +58,16 @@ pub(crate) fn find_program(name: &str) -> Option<PathBuf> {
     }
     if let Some(base) = directories::BaseDirs::new() {
         dirs.push(base.home_dir().join(".local").join("bin"));
+        // winget puts command-line tools (uv, ...) in this folder and adds it to the user PATH, but a program that was
+        // already running (an installer, an open terminal) does not see that change.
+        if cfg!(windows) {
+            dirs.push(
+                base.data_local_dir()
+                    .join("Microsoft")
+                    .join("WinGet")
+                    .join("Links"),
+            );
+        }
     }
     first_in(&file, &dirs)
 }

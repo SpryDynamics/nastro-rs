@@ -165,6 +165,17 @@ stages:
               if (([Environment]::GetEnvironmentVariable('Path','User')).Split(';') -contains $dir) { throw 'uninstall left the PATH entry behind' }
               Write-Host 'installer: install, run, PATH, signature and uninstall all verified'
             displayName: Test the installer (install, run, uninstall)
+
+          # The optional-tools steps (FFmpeg and speaker labels through winget, the model, the Hugging Face token) with a
+          # stand-in winget and whisperx: nothing is downloaded, and the real settings file is never touched.
+          - pwsh: |
+              $ErrorActionPreference = 'Stop'
+              cargo build --release --locked -p nastro-transcribe --bin nastro-fake-whisperx
+              if ($LASTEXITCODE -ne 0) { throw 'building the stand-in whisperx failed' }
+              $setup = (Get-ChildItem dist\*-setup.exe | Select-Object -First 1).FullName
+              ./eng/test-installer-deps.ps1 -Setup $setup -FakeWhisperx target\release\nastro-fake-whisperx.exe
+            displayName: Test the installer's optional tools (offline)
+
           # Verify what actually ships, not the intermediate files: unpack the archive
           # and check the signature on the extracted binaries.
           - pwsh: |

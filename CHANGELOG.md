@@ -8,6 +8,21 @@ to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **The Windows installer can fetch what nastro runs on** (all opt-in; user-level, no administrator rights; a failure never
+  stops nastro itself being installed). *FFmpeg* is offered, ticked, when it is not found, and installed with winget.
+  *Speaker labels (WhisperX)* are offered unticked: the installer installs `uv` with winget if needed, runs
+  `nastro transcribe --setup-whisperx` in a visible console, lets you **choose the speech model**
+  (`large-v3-turbo`, `medium`, `small`, `base`) and optionally **enter your Hugging Face token**, with buttons to create the
+  token and to accept the model's terms. The token is checked with Hugging Face afterwards. A plain silent install still uses
+  no network; scripted installs name the tasks (`/TASKS="ffmpeg,whisperx"`, `/MODEL=small`, `/HFTOKENFILE=<file>`). Uninstalling
+  leaves these tools and your settings alone. Tested offline in the release pipeline with a stand-in winget and whisperx.
+- **`nastro config`**: `path`, `set <key> <value>` (for `hf_token`, `whisper_model`, `transcriber`, `lang`) and `check-hf`.
+  `set` edits the config file in place, keeping its comments and other settings, validates the value, writes atomically, and
+  never prints a token; the token is read from standard input (or `--from-file`, which deletes the file), never from the command
+  line. `check-hf` asks Hugging Face whether the token works and the speaker model's terms are accepted, and tells a rejected token
+  from unaccepted terms (exit status 2 / 3).
+- `nastro transcribe --setup-whisperx` now finds `uv` where winget puts it even when the running program's `PATH` predates the
+  installation, and points to the new commands for the token.
 - **Windows installer** (`nastro-rs-<version>-windows-x86_64-setup.exe`, Inno Setup), published alongside the zip. Per-user by
   default (no administrator rights), optional machine-wide; puts `nastro` and `nastro-tap` together, optionally adds them to
   `PATH` and the Start menu, registers an uninstaller, upgrades in place without duplicating the `PATH` entry, and restores

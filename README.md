@@ -100,7 +100,24 @@ For scripted installs:
 .\nastro-rs-<version>-windows-x86_64-setup.exe /VERYSILENT /ALLUSERS /DIR="C:\Tools\nastro-rs"
 ```
 
-The installer does not include FFmpeg (see Requirements); it tells you at the end if it is missing.
+**Optional tools, offered by the installer.** On the *Select Additional Tasks* page it can also fetch what nastro runs on,
+instead of you doing it by hand. Nothing is installed unless you tick it (a silent install fetches nothing unless you name
+the task in `/TASKS=`), everything goes into your user profile (no administrator rights), and a failure never stops nastro
+itself from being installed: the last page says what to do by hand.
+
+- **FFmpeg** (ticked, shown only if FFmpeg is not found): installed with `winget install Gyan.FFmpeg`. Without winget the
+  last page tells you where to get it.
+- **Speaker labels (WhisperX)** (unticked: about 2 GB plus a free Hugging Face account): installs [`uv`](https://docs.astral.sh/uv/)
+  with winget if needed, then runs `nastro transcribe --setup-whisperx` in a console window so you can watch it. Two more
+  pages then let you **choose the speech model** (`large-v3-turbo`, `medium`, `small` or `base`; saved as `whisper_model`) and
+  **paste your Hugging Face token** (optional; the page has buttons to create a token and to accept the model's terms). The
+  token is stored in your nastro settings file, then checked with Hugging Face so you hear about a wrong token or
+  unaccepted terms now rather than in the middle of a long transcription.
+
+Scripted installs: `/TASKS="ffmpeg,whisperx" /MODEL=small` and, for the token, `/HFTOKENFILE=C:\path\token.txt` (a file
+holding it on its first line; a token on the command line would be visible to other users, so there is no switch for the
+token itself). Uninstalling nastro leaves FFmpeg, `uv`, WhisperX and your settings alone, as you may use them elsewhere
+(`winget uninstall Gyan.FFmpeg`, `uv tool uninstall whisperx`).
 
 **Windows or Linux: the archive.** Unpack the `.zip` / `.tar.gz` anywhere and keep `nastro` and `nastro-tap` in one
 folder. Nothing is installed system-wide.
@@ -245,9 +262,12 @@ It is heavier than the built-in engine, which is why it is optional:
   (`hf_token = "hf_..."`) or the `HF_TOKEN` environment variable. The token is handed to WhisperX through its
   environment only (never on a command line, where other users could see it) and is scrubbed from any error text.
   Treat the config file like any file holding a credential; the environment variable avoids storing it at all.
+  Without opening the file: `echo hf_... | nastro config set hf_token` (read from standard input, so it is not on a command
+  line; it is never printed), and `nastro config check-hf` tells you whether Hugging Face accepts the token and the model's
+  terms are accepted (exit status 0, 2 token rejected, 3 terms not accepted, 4 could not check).
 - **About 2 GB to install** (Python, PyTorch, pyannote) plus several GB of models downloaded on first use, into
   your Hugging Face cache. It installs for your user only, via [`uv`](https://docs.astral.sh/uv/)
-  (`winget install astral-sh.uv`); `--setup-whisperx` asks nothing else and does it for you.
+  (`winget install astral-sh.uv`); `--setup-whisperx` asks nothing else and does it for you. (The Windows installer can do all of this too, see [Install](#install).)
 - **CPU only and slow**: a multiple of the recording length with the default model; it shows which stage it is in
   (detecting speech, transcribing, aligning, identifying speakers) because WhisperX reports no percentage. Use a
   smaller `--model` (`small`, `base`) for speed.
@@ -265,7 +285,9 @@ available keys. A missing config file is not an error - sane defaults apply
 (`~/Recordings/nastro`, `large-v3-turbo`, etc.). The transcription keys are `whisper_model`
 (a model name or path), `lang` (`auto` or a code such as `en`), `transcriber` (`whisper`, or `whisperx` for speaker
 labels), `hf_token` (for `whisperx`; or `HF_TOKEN`) and `max_parallel_transcriptions` (how many the TUI runs at
-once; default 2).
+once; default 2). `nastro config path` prints the file in use and `nastro config set <key> <value>` changes one of
+`hf_token`, `whisper_model`, `transcriber` or `lang` without disturbing the rest of the file (comments and other settings
+are kept).
 
 ## Contributing
 

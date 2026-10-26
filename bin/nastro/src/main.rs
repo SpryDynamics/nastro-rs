@@ -1,5 +1,6 @@
 #[macro_use]
 mod out;
+mod config_cmd;
 mod transcribe_cmd;
 
 use clap::{Parser, Subcommand};
@@ -40,6 +41,9 @@ enum Command {
     },
     /// Transcribe a recording (speech to text, on this computer).
     Transcribe(transcribe_cmd::Args),
+    /// Show or change the config file (also used by the Windows installer).
+    #[command(subcommand)]
+    Config(config_cmd::Cmd),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -48,6 +52,10 @@ fn main() -> anyhow::Result<()> {
     let explicit = cli
         .config
         .or_else(|| std::env::var_os("NASTRO_CONFIG").map(std::path::PathBuf::from));
+    // Changing the config must work even when the current one is broken, so it runs before the config is loaded.
+    if let Some(Command::Config(cmd)) = cli.command {
+        return config_cmd::run(explicit.as_deref(), cmd);
+    }
     let config = load_config(explicit.as_deref())?;
 
     match cli.command {
@@ -69,6 +77,7 @@ fn main() -> anyhow::Result<()> {
         Some(Command::Records { plain: true }) => run_records(&config, true),
         Some(Command::Records { plain: false }) => run_tui_or_list(&config),
         Some(Command::Transcribe(args)) => transcribe_cmd::run(&config, args),
+        Some(Command::Config(_)) => unreachable!("handled above"),
     }
 }
 

@@ -44,10 +44,16 @@ on request by the user's own `uv` into their own profile. It in turn uses PyTorc
 downloads models from Hugging Face on first use: notably `pyannote/speaker-diarization-community-1` (CC-BY-4.0, gated: the
 user accepts its terms with their own Hugging Face account) and a wav2vec2 alignment model. Their licenses and terms apply
 to whoever installs and uses them, not to nastro's code.
+
+The Windows installer can offer to fetch FFmpeg (`winget install Gyan.FFmpeg`) and `uv` (`winget install astral-sh.uv`, which
+then installs WhisperX), only when the user ticks them. Both are downloaded by winget from their publishers to the user's own
+profile; nothing is bundled into or redistributed with nastro, and the licenses above apply to the user as before.
+
 **Inno Setup** (<https://jrsoftware.org/isinfo.php>, Copyright (C) 1997-2026 Jordan Russell and Martijn Laan) builds the Windows
 installer, and its small setup/uninstall runtime is embedded in `nastro-rs-<version>-windows-x86_64-setup.exe`. Its license
 permits use and redistribution for any purpose, including commercial, provided its copyright notices are kept, which they are
 (they are part of the embedded runtime).
+
 ## Libraries linked dynamically
 
 The Linux build links the PulseAudio client libraries (`libpulse`, `libpulse-simple`;
