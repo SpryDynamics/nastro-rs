@@ -6,6 +6,10 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-25
+
+A Windows installer, which can also fetch FFmpeg and the optional speaker-label tools for you.
+
 ### Added
 
 - **The Windows installer can fetch what nastro runs on** (all opt-in; user-level, no administrator rights; a failure never
