@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-26
+
+### Changed
+
+- The code-signing certificate (new Azure Artifact Signing profile) no longer carries the street address and postal code, so
+  Windows SmartScreen and the file's Properties show a short publisher line ("Spry Dynamics, LLC, Phoenix, Arizona, US")
+  instead of a long one. No change to the program itself.
+- Added `AGENTS.md` (and a `CLAUDE.md` that imports it): short guidance for AI coding agents working in this repository.
 ## [0.1.2] - 2026-10-25
 
 A Windows installer, which can also fetch FFmpeg and the optional speaker-label tools for you.
