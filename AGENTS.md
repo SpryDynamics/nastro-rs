@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Guidance for AI coding agents working in this repository. `README.md`, `CONTRIBUTING.md` and `docs/releasing.md` hold the
 full story; this file is the short list of things that are easy to get wrong.
